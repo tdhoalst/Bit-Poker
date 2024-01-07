@@ -1,0 +1,45 @@
+/* ActionButtons.css */
+.action-buttons {
+    position: fixed; /* Fixed position */
+    bottom: 0; /* Align to the bottom of the screen */
+    left: 0; /* Align to the left of the screen */
+    right: 0; /* Align to the right of the screen */
+    display: flex;
+    justify-content: space-evenly;
+    padding: 30px 0; /* Padding at top and bottom */
+  }
+  
+  .button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin: 0 px; /* Reduced side margins */
+  }
+  
+  .call {
+    background-color: #28a745; /* Green */
+    color: white;
+  }
+  
+  .raise {
+    background-color: #28a745; /* Green */
+    color: white;
+  }
+  
+  .check {
+    background-color: #ffc107; /* Yellow */
+    color: black;
+  }
+  
+  .fold {
+    background-color: #dc3545; /* Red */
+    color: white;
+  }
+  
+  .button:hover {
+    opacity: 0.8;
+  }
+  

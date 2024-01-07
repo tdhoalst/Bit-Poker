@@ -1,0 +1,17 @@
+/* Board.css */
+.board {
+    display: flex;
+    justify-content: center;
+    padding: 10px;
+  }
+  
+  .community-card {
+    height: 135px;
+    margin-right: 5px;
+  }
+  
+  /* Last card should not have a right margin */
+  .community-card:last-child {
+    margin-right: 0;
+  }
+  

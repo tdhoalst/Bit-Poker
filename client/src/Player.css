@@ -1,0 +1,44 @@
+/* Player.css */
+.player {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Adjust as needed */
+  background: rgba(0, 0, 0, .85); /* Semi-transparent black background */
+  border-radius: 9px;
+  padding: 2px;
+  margin: 10px;
+  position: relative; /* Set relative for absolute positioning of children */
+  width: 250px; /* Adjust width as needed */
+  height: 80px; /* Adjust height as needed */
+  margin-bottom: 12px;
+}
+
+.cards {
+  position: absolute; /* Position the cards absolutely within player */
+  top: 50%;
+  left: 2px; /* Adjust as needed */
+  transform: translateY(-50%); /* Center the cards vertically */
+  z-index: 1;
+}
+
+.card {
+  height: 80px; /* Adjust as needed */
+  margin-right: 0px; /* Overlap the cards */
+}
+
+.player-info {
+  z-index: 2; /* Ensure the player info is above the cards */
+  color: black;
+  text-align: center;
+  margin-left: auto; /* Push the info to the right */
+  margin-right: 0px; /* Space between info and the edge of the container */
+}
+
+.player-status {
+  width: 100px;
+  margin-top: -40px; /* Space between player info and status */
+  margin-left: 260px; /* Space between player info and status */
+  color: black; /* Style the color of your status text */
+  text-transform: uppercase;
+}
+

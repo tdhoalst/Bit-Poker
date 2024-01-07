@@ -1,0 +1,26 @@
+/* PlayerInfo.css */
+.player-info {
+    background-color: #D3D3D3;
+    color: black;
+    padding: 8px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 120px; /* Adjust as needed */
+    height: 44%; /* Adjust as needed */
+    text-align: center;
+    font-family: "Times New Roman", Times, serif;
+  }
+  
+  .name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .chips {
+    color: green;
+    font-weight: bold;
+  }
+  

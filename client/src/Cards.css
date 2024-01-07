@@ -1,0 +1,11 @@
+/* Cards.css */
+.cards {
+    display: flex;
+    align-items: center;
+  }
+  
+  .card {
+    height: 80px; /* Adjust as needed */
+    margin-right: 0px; /* Overlap the cards */
+  }
+  

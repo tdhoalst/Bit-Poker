@@ -1,0 +1,23 @@
+.game-status {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    width: 240px; /* Example fixed width */
+    height: 40px; /* Example fixed height, optional */
+    text-align: center;
+  }
+  
+  .current-blind {
+    color: grey;
+    font-weight: bold;
+    font-size: 1.2em;
+  }
+  
+  .next-blind {
+    color: red;
+    font-size: 1em;
+  }
