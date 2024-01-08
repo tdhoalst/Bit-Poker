@@ -178,22 +178,31 @@ io.on('connection', (socket) => {
   const newPlayer = new Player(`User ${socket.id}`, 1000, socket.id);
   gameState.poker.players.push(newPlayer);
 
-  //CHECK IF THIS IS NECESSARY???!!!
-  socket.emit('userId', { userId: socket.id });
+  // Send the connected users to the client
   socket.emit('connectedUsers', Array.from(gameState.connectedUsers));
-  socket.broadcast.emit('userConnected', { userId: socket.id });
 
-  // Send the socket ID to the client (used to determine which cards to show which client)
-  socket.emit('yourSocketId', socket.id);
+  // Send the socket ID to the client (used to determine which hole cards to show which client)
+  socket.emit('playerSocketId', socket.id);
 
   socket.on('action', (data) => {
-    if (isValidAction(data)) {
-      handleAction(socket.id, data);
+    console.log(`Action received: ${data.action} from ${data.playerId}`);
+
+    // Prepare the data to be broadcasted
+    const broadcastData = {
+      playerId: data.playerId,
+      action: data.action
+    };
+
+    // If the action is a bet, include the amount in the broadcast
+    if (data.action === 'bet' && data.amount) {
+      broadcastData.amount = data.amount;
     }
+
+    // Broadcast the action (and amount, if applicable) to other clients
+    socket.broadcast.emit('actionUpdate', broadcastData);
   });
 
   socket.on('disconnect', () => {
-    console.log(`User ${socket.id} disconnected`);
     onUserDisconnect(socket.id);
   });
 

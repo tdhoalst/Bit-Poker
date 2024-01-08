@@ -44,6 +44,12 @@ function App() {
     names: []
   });
 
+  /*
+  const [players, setPlayers] = useState([
+    // Initial players data
+  ]);
+  */
+
   const [playerStatus, setPlayerStatus] = useState('');
 
   const [communityCards, setCommunityCards] = useState([]);
@@ -60,12 +66,11 @@ function App() {
       setConnectedUsers(userIds);
     });
 
-    socket.on('yourSocketId', (id) => {
+    socket.on('playerSocketId', (id) => {
       setCurrentUserId(id);
     });
 
     socket.on('preFlop', (data) => {
-      
       console.log("Received pre-flop");
       const { playerHandImages, playerHandNames } = data;
       setPlayerHand({
@@ -90,6 +95,20 @@ function App() {
       setCommunityCards(existingCards => [...existingCards, { image: riverImage }]);
     });
 
+    socket.on('actionUpdate', (data) => {
+      const { playerId, action, amount } = data;
+    
+      // Assuming you have a function to update the player's status
+      // and handle the bet amount display if the action is a bet
+      if (action === 'bet' && amount) {
+        console.log("this is a bet ");
+        //updatePlayerStatus(playerId, `Bet ${amount}`);
+      } else {
+        //updatePlayerStatus(playerId, action);
+        console.log("this is a check or fold ");
+      }
+    });   
+
     return () => {
       // Disconnect event listeners
       socket.off('connect');
@@ -102,6 +121,17 @@ function App() {
       socket.off('river');
     };
   }, []);
+
+  /*
+  const updatePlayerStatus = (playerId, status) => {
+    setPlayers(currentPlayers => currentPlayers.map(player => {
+      if (player.socketId === playerId) {
+        return { ...player, status: status };
+      }
+      return player;
+    }));
+  }; 
+  */
 
   // Handlers for button clicks
   const handleCall = () => {
