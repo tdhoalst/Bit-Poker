@@ -6,11 +6,11 @@
   background: rgba(0, 0, 0, .85); /* Semi-transparent black background */
   border-radius: 9px;
   padding: 2px;
-  margin: 10px;
+  margin: 1px;
   position: relative; /* Set relative for absolute positioning of children */
   width: 250px; /* Adjust width as needed */
   height: 80px; /* Adjust height as needed */
-  margin-bottom: 12px;
+  margin-bottom: 0px;
 }
 
 .cards {
@@ -36,7 +36,7 @@
 
 .player-status {
   width: 100px;
-  margin-top: -40px; /* Space between player info and status */
+  margin-top: 0px;
   margin-left: 260px; /* Space between player info and status */
   color: black; /* Style the color of your status text */
   text-transform: uppercase;

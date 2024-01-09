@@ -12,45 +12,35 @@ import './App.css';
 const SOCKET_URL = "http://localhost:3011";
 const socket = io(SOCKET_URL);
 
-// Example array of players
-const players = [
-  {
-    name: 'LuckBox',
-    cardImages: [
-      process.env.PUBLIC_URL + '/assets/spades_king.png',
-      process.env.PUBLIC_URL + '/assets/spades_ace.png'
-    ],
-    chips: '3,025',
-    status: 'All in',
-    // Add any additional player-specific state or props needed for the buttons
-  },
-  {
-    name: 'TruthSeeker',
-    cardImages: [
-      process.env.PUBLIC_URL + '/assets/clubs_10.png',
-      process.env.PUBLIC_URL + '/assets/clubs_queen.png'
-    ],
-    chips: '5,169',
-    status: 'Check',
-    // Add any additional player-specific state or props needed for the buttons
-  }
-  // ... other players
-];
-
 function App() {
   const [currentUserId, setCurrentUserId] = useState(''); // State to store the current user's socket ID (used to dislay right cards for each player)
-  const [playerHand, setPlayerHand] = useState({
-    images: [],
-    names: []
-  });
-
-  /*
+ 
   const [players, setPlayers] = useState([
-    // Initial players data
+    /*
+    {
+      name: 'LuckBox',
+      cardImages: [
+        process.env.PUBLIC_URL + '/assets/spades_king.png',
+        process.env.PUBLIC_URL + '/assets/spades_ace.png'
+      ],
+      cardNames: ['King of Spades', 'Ace of Spades'],
+      chips: '3,025',
+      status: 'All in',
+      socketId: ''
+    },
+    {
+      name: 'TruthSeeker',
+      cardImages: [
+        process.env.PUBLIC_URL + '/assets/clubs_10.png',
+        process.env.PUBLIC_URL + '/assets/clubs_queen.png'
+      ],
+      cardNames: ['10 of Clubs', 'Queen of Clubs'],
+      chips: '5,169',
+      status: 'Check',
+      socketId: ''
+    }
+    */
   ]);
-  */
-
-  const [playerStatus, setPlayerStatus] = useState('');
 
   const [communityCards, setCommunityCards] = useState([]);
 
@@ -61,6 +51,14 @@ function App() {
     socket.on('connect', () => console.log('Connected to the server'));
     socket.on('connect_error', (error) => console.error('Connection Error:', error));
     socket.on('error', (error) => console.error('Socket.IO Error:', error));
+
+    socket.on('newPlayer', (newPlayer) => {
+      setPlayers(currentPlayers => [...currentPlayers, newPlayer]);
+    });
+
+    socket.on('allPlayers', (players) => {
+      setPlayers(players);
+    });
 
     socket.on('connectedUsers', (userIds) => {
       setConnectedUsers(userIds);
@@ -73,11 +71,18 @@ function App() {
     socket.on('preFlop', (data) => {
       console.log("Received pre-flop");
       const { playerHandImages, playerHandNames } = data;
-      setPlayerHand({
-        images: playerHandImages,
-        names: playerHandNames
-      });
-    });
+    
+      setPlayers(currentPlayers => currentPlayers.map(player => {
+        if (player.socketId === currentUserId) {
+          return {
+            ...player,
+            cardImages: playerHandImages,
+            cardNames: playerHandNames
+          };
+        }
+        return player;
+      }));
+    });    
 
     socket.on('flop', (data) => {
       const { flopImages } = data;
@@ -100,12 +105,11 @@ function App() {
     
       // Assuming you have a function to update the player's status
       // and handle the bet amount display if the action is a bet
+      console.log(playerId, action, amount);
       if (action === 'bet' && amount) {
-        console.log("this is a bet ");
-        //updatePlayerStatus(playerId, `Bet ${amount}`);
+        updatePlayerStatus(playerId, `Bet ${amount}`);
       } else {
-        //updatePlayerStatus(playerId, action);
-        console.log("this is a check or fold ");
+        updatePlayerStatus(playerId, action);
       }
     });   
 
@@ -114,6 +118,8 @@ function App() {
       socket.off('connect');
       socket.off('connect_error');
       socket.off('error');
+      socket.off('newPlayer');
+      socket.off('playerSocketId');
       socket.off('connectedUsers');
       socket.off('preFlop');
       socket.off('flop');
@@ -122,7 +128,6 @@ function App() {
     };
   }, []);
 
-  /*
   const updatePlayerStatus = (playerId, status) => {
     setPlayers(currentPlayers => currentPlayers.map(player => {
       if (player.socketId === playerId) {
@@ -131,31 +136,30 @@ function App() {
       return player;
     }));
   }; 
-  */
-
+  
   // Handlers for button clicks
   const handleCall = () => {
     console.log('Call');
     socket.emit('action', { action: 'call', playerId: currentUserId });
-    //updatePlayerStatus('Call');
+    updatePlayerStatus(currentUserId, 'Call');
   };
   
   const handleCheck = () => {
     console.log('Check');
-    //socket.emit('action', { action: 'check', playerId: currentUserId });
-    socket.emit('action', 'check');
-    //updatePlayerStatus('Check');
+    socket.emit('action', { action: 'check', playerId: currentUserId });
+    updatePlayerStatus(currentUserId, 'Check');
   };
 
   const handleFold = () => {
     console.log('Fold');
     socket.emit('action', { action: 'fold', playerId: currentUserId });
-    //updatePlayerStatus('Fold');
+    updatePlayerStatus(currentUserId, 'Fold');
   };
 
   const handleBetConfirm = (amount) => {
     console.log(`Raise to ${amount}`);
     socket.emit('action', { action: 'bet', amount: amount, playerId: currentUserId });
+    updatePlayerStatus(currentUserId, 'Bet ' + amount);
     setIsRaising(false); // Hide betting screen after confirming the bet
   };
 
@@ -176,9 +180,9 @@ function App() {
 
         return (
           <Player
-            key={index}
+            key={player.socketId}
             name={player.name}
-            cardImages={isCurrentPlayer ? playerHand.images : [process.env.PUBLIC_URL + '/assets/card_backside.jpg', process.env.PUBLIC_URL + '/assets/card_backside.jpg']}
+            cardImages={isCurrentPlayer ? player.cardImages : [process.env.PUBLIC_URL + '/assets/card_backside.jpg', process.env.PUBLIC_URL + '/assets/card_backside.jpg']}
             chips={player.chips}
             status={player.status}
           />

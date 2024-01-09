@@ -44,11 +44,23 @@ const Action = mongoose.model('Action', actionSchema);
 
 class GameState {
   constructor() {
-    this.connectedUsers = new Set();
-    this.userStatusMap = new Map();
+    this.connectedPlayers = [];
+    //this.userStatusMap = new Map();
     this.stage = 0;
     this.isStageIncremented = false;
     this.poker = new Poker(2, 10000);
+  }
+
+  addPlayer(player) {
+    this.connectedPlayers.push(player);
+  }
+
+  getPlayerBySocketId(socketId) {
+    return this.connectedPlayers.find(player => player.socketId === socketId);
+  }
+
+  removePlayerBySocketId(socketId) {
+    this.connectedPlayers = this.connectedPlayers.filter(player => player.socketId !== socketId);
   }
 
   preFlopState() {
@@ -99,6 +111,14 @@ class GameState {
     // io.emit('showdown', { winner, potsize });
   }
 
+  newHandState() {
+    //clear board
+    //clear player hands
+    //reset player status
+    //move list of connected players +1
+    //reset stage
+  }
+
   handleGameStage() {
     console.log("Handling game stage");
     switch (this.stage) {
@@ -122,45 +142,7 @@ class GameState {
     }
   }
   
-  updateStage(io) {
-    const userCount = this.connectedUsers.size;
-
-    if (userCount > 1) {
-      let allSameStatus = true;
-      let lastStatus = null;
-
-      for (let userId of this.connectedUsers) {
-        const userStatus = this.userStatusMap.get(userId);
-
-        if (lastStatus === null) {
-          lastStatus = userStatus;
-        } else if (userStatus !== lastStatus || userStatus === 'none') {
-          allSameStatus = false;
-          break;
-        }
-      }
-
-      if (allSameStatus) {
-        if (!this.isStageIncremented) {
-          this.stage++;
-          io.emit('updateStage', { stage: this.stage });
-
-          // Handle the new stage
-          this.handleGameStage();
-
-          // Reset player statuses for the new stage
-          this.userStatusMap.clear();
-          for (let userId of this.connectedUsers) {
-            this.userStatusMap.set(userId, 'none');
-          }
-
-          this.isStageIncremented = false; // Allow for further stage incrementation
-        }
-      } else {
-        this.isStageIncremented = false;
-      }
-    }
-  }
+  //ADD NEW UPDATE STAGE METHOD HERE
 }
 
 
@@ -169,24 +151,42 @@ const gameState = new GameState();
 app.use(express.static('public'));
 app.use(express.json());
 
+const generateRandomName = () => {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+      result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+};
+
 io.on('connection', (socket) => {
   console.log(`User ${socket.id} connected`);
-  gameState.connectedUsers.add(socket.id);
 
-  // Create a new player and add it to the poker game
-  //UPDATE THIS SO STARTING STACK SIZE IS NOT HARD CODED
-  const newPlayer = new Player(`User ${socket.id}`, 1000, socket.id);
-  gameState.poker.players.push(newPlayer);
+  const playerName = generateRandomName();
+  const newPlayer = {
+    name: playerName,
+    cardImages: [],
+    cardNames: [],
+    chips: 5000,
+    status: '',
+    socketId: socket.id,
+  };
 
-  // Send the connected users to the client
-  socket.emit('connectedUsers', Array.from(gameState.connectedUsers));
+  gameState.addPlayer(newPlayer);
+
+  // io.emit sends new player to all clients
+  // socket.emit only sends to the client that just connected
+  io.emit('newPlayer', newPlayer);
+
 
   // Send the socket ID to the client (used to determine which hole cards to show which client)
   socket.emit('playerSocketId', socket.id);
 
-  socket.on('action', (data) => {
-    console.log(`Action received: ${data.action} from ${data.playerId}`);
+  // send list of conected players to client
+  socket.emit('allPlayers', gameState.connectedPlayers);
 
+  socket.on('action', (data) => {
     // Prepare the data to be broadcasted
     const broadcastData = {
       playerId: data.playerId,
@@ -197,47 +197,18 @@ io.on('connection', (socket) => {
     if (data.action === 'bet' && data.amount) {
       broadcastData.amount = data.amount;
     }
+    console.log(broadcastData);
 
-    // Broadcast the action (and amount, if applicable) to other clients
+    // socket.broadcast.emit sends to all clients except the sender
     socket.broadcast.emit('actionUpdate', broadcastData);
   });
 
   socket.on('disconnect', () => {
-    onUserDisconnect(socket.id);
+    console.log(`User ${socket.id} disconnected`);
+    gameState.removePlayerBySocketId(socket.id);
+    io.emit('allPlayers', gameState.connectedPlayers); // io.emit sends to all clients
   });
-
-  socket.emit('updateStage', { stage: gameState.stage });
 });
-
-function onUserDisconnect(socketId) {
-  console.log(`User ${socketId} disconnected`);
-  gameState.connectedUsers.delete(socketId);
-  gameState.userStatusMap.delete(socketId);
-
-  // Remove the player from the poker game
-  const playerIndex = gameState.poker.players.findIndex(player => player.socketId === socketId);
-  if (playerIndex > -1) {
-    gameState.poker.players.splice(playerIndex, 1);
-  }
-
-  io.emit('userDisconnected', { userId: socketId });
-}
-
-async function handleAction(userId, action) {
-  try {
-    const newAction = new Action({ status: action });
-    await newAction.save();
-    gameState.userStatusMap.set(userId, action);
-    io.emit('updateStatus', { userId, status: action });
-    gameState.updateStage(io);
-  } catch (err) {
-    console.error('Error handling action:', err);
-  }
-}
-
-function isValidAction(action) {
-  return ['bet', 'check', 'fold'].includes(action);
-}
 
 server.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);

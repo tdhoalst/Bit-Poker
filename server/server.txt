@@ -1,1 +1,1 @@
-remeber to run "mongod --dbpath ~/data/db" before starting server
+run "mongod --dbpath ~/data/db" in terminal before starting server
