@@ -1,4 +1,8 @@
 /* Player.css */
+.player-container {
+  position: relative;
+}
+
 .player {
   display: flex;
   align-items: center;
@@ -35,10 +39,13 @@
 }
 
 .player-status {
+  position: absolute;
   width: 100px;
-  margin-top: 0px;
+  /*bottom: 0px; /* this interfears with margin-top ?? */
+  margin-top: -25px;
   margin-left: 260px; /* Space between player info and status */
   color: black; /* Style the color of your status text */
   text-transform: uppercase;
+  text-align: left;
 }
 
