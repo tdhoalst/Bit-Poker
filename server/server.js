@@ -11,7 +11,7 @@ const { Board, Poker } = require('./poker.js');
 // Create an instance of the Express application
 const app = express();
 
-// Enable CORS middleware to allow cross-origin requests
+// Enable CORS middleware to allow cross-origin requests 
 app.use(cors());
 
 // Create an HTTP server using Express
@@ -45,10 +45,34 @@ const Action = mongoose.model('Action', actionSchema);
 class GameState {
   constructor() {
     this.connectedPlayers = [];
-    //this.userStatusMap = new Map();
+    this.startingBigBlind = 20;
+    this.currentBigBlind = this.startingBigBlind;
+    this.timeRemaining = 300;
     this.stage = 0;
     this.isStageIncremented = false;
     this.poker = new Poker(2, 10000);
+
+    this.initTimer(); // Initialize the timer
+  }
+
+  initTimer() {
+    setInterval(() => {
+      if (this.timeRemaining === 0) {
+        this.updateBlinds();
+      } else {
+        this.timeRemaining--;
+      }
+    }, 1000);
+  }
+
+  updateBlinds() {
+    this.currentBigBlind *= 2;
+    this.timeRemaining = 300;
+    io.emit('blindsUpdate', {
+      currentBlind: this.currentBigBlind, 
+      nextBlind: this.currentBigBlind * 2, 
+      timeLeft: this.timeRemaining
+    });
   }
 
   addPlayer(player) {
@@ -142,7 +166,14 @@ class GameState {
     }
   }
   
-  //ADD NEW UPDATE STAGE METHOD HERE
+  updateStage() {
+    if (this.stage === 1) {
+        minBet = this.bigBlind;
+    } else {
+        minBet = 0;
+    }
+
+  }
 }
 
 
@@ -163,6 +194,13 @@ const generateRandomName = () => {
 io.on('connection', (socket) => {
   console.log(`User ${socket.id} connected`);
 
+  //emit the blinds and blind time remaining to the client
+  socket.emit('blindsUpdate', {
+    currentBlind: gameState.currentBigBlind, 
+    nextBlind: gameState.currentBigBlind * 2, 
+    timeLeft: gameState.timeRemaining
+  });
+
   const playerName = generateRandomName();
   const newPlayer = {
     name: playerName,
@@ -177,14 +215,15 @@ io.on('connection', (socket) => {
 
   // io.emit sends new player to all clients
   // socket.emit only sends to the client that just connected
-  io.emit('newPlayer', newPlayer);
+  //socket.emit('newPlayer', newPlayer);
 
 
   // Send the socket ID to the client (used to determine which hole cards to show which client)
-  socket.emit('playerSocketId', socket.id);
+  //socket.emit('playerSocketId', socket.id);
 
   // send list of conected players to client
-  socket.emit('allPlayers', gameState.connectedPlayers);
+  io.emit('allPlayers', gameState.connectedPlayers);
+  console.log("adding new player");
 
   socket.on('action', (data) => {
     // Prepare the data to be broadcasted

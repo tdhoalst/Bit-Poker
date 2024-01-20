@@ -1,25 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import SocketContext from './SocketContext'; // Import the context
 import './GameStatus.css';
 
-function GameStatus({ startingBigBlind }) {
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
-  const [currentBlind, setCurrentBlind] = useState(startingBigBlind);
-  const [nextBlind, setNextBlind] = useState(startingBigBlind * 2);
+function GameStatus() {
+  const [timeLeft, setTimeLeft] = useState(300); // Initially set to 5 minutes
+  const [currentBlind, setCurrentBlind] = useState(0);
+  const [nextBlind, setNextBlind] = useState(0);
+
+  const socket = useContext(SocketContext); // Access the socket from the context
 
   useEffect(() => {
-    if (timeLeft === 0) {
-      // Update blinds and reset timer
-      setCurrentBlind(nextBlind);
-      setNextBlind(nextBlind * 2);
-      setTimeLeft(300);
-    } else {
-      const intervalId = setInterval(() => {
-        setTimeLeft(timeLeft - 1);
-      }, 1000);
+    const blindsUpdateHandler = (data) => {
+      setCurrentBlind(data.currentBlind);
+      setNextBlind(data.nextBlind);
+      setTimeLeft(data.timeLeft);
+      startCountdown(data.timeLeft);
+    };
 
-      return () => clearInterval(intervalId);
-    }
-  }, [timeLeft, nextBlind]);
+    socket.on('blindsUpdate', blindsUpdateHandler);
+
+    const startCountdown = (initialTime) => {
+      const intervalId = setInterval(() => {
+        setTimeLeft((prevTime) => {
+          if (prevTime <= 1) {
+            clearInterval(intervalId); // Stop the countdown
+            return 0;
+          }
+          return prevTime - 1;
+        });
+      }, 1000);
+    };
+
+    return () => {
+      socket.off('blindsUpdate', blindsUpdateHandler);
+      //socket.disconnect();
+    };
+  }, [socket]);
 
   const formatTime = (time) => {
     const minutes = Math.floor(time / 60);
