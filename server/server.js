@@ -174,17 +174,14 @@ io.on('connection', (socket) => {
   };
 
   gameState.addPlayer(newPlayer);
+  // send list of conected players to client
+  socket.emit('allPlayers', gameState.connectedPlayers);
 
-  // io.emit sends new player to all clients
-  // socket.emit only sends to the client that just connected
-  io.emit('newPlayer', newPlayer);
-
+  // socket.broadcast sends new player to all clients already connected, except sender
+  socket.broadcast.emit('newPlayer', newPlayer);
 
   // Send the socket ID to the client (used to determine which hole cards to show which client)
   socket.emit('playerSocketId', socket.id);
-
-  // send list of conected players to client
-  socket.emit('allPlayers', gameState.connectedPlayers);
 
   socket.on('action', (data) => {
     // Prepare the data to be broadcasted
