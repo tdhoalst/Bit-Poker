@@ -1,5 +1,5 @@
 // App.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 
 import Player from './Player';
@@ -12,77 +12,55 @@ import './App.css';
 const SOCKET_URL = "http://localhost:3011";
 const socket = io(SOCKET_URL);
 
+
 function App() {
   const [currentUserId, setCurrentUserId] = useState(''); // State to store the current user's socket ID (used to dislay right cards for each player)
- 
-  const [players, setPlayers] = useState([
-    /*
-    {
-      name: 'LuckBox',
-      cardImages: [
-        process.env.PUBLIC_URL + '/assets/spades_king.png',
-        process.env.PUBLIC_URL + '/assets/spades_ace.png'
-      ],
-      cardNames: ['King of Spades', 'Ace of Spades'],
-      chips: '3,025',
-      status: 'All in',
-      socketId: ''
-    },
-    {
-      name: 'TruthSeeker',
-      cardImages: [
-        process.env.PUBLIC_URL + '/assets/clubs_10.png',
-        process.env.PUBLIC_URL + '/assets/clubs_queen.png'
-      ],
-      cardNames: ['10 of Clubs', 'Queen of Clubs'],
-      chips: '5,169',
-      status: 'Check',
-      socketId: ''
-    }
-    */
-  ]);
+  const currentUserIdRef = useRef(currentUserId);
+
+  const [players, setPlayers] = useState([]);
 
   const [communityCards, setCommunityCards] = useState([]);
 
-  const [isRaising, setIsRaising] = useState(false); // State to control the display of the betting screen
-  const [connectedUsers, setConnectedUsers] = useState([]);
+  const [isRaising, setIsRaising] = useState(false); // State to control the display of the betting screen  
+
 
   useEffect(() => {
+    console.log('useeffect', players);
+
+    currentUserIdRef.current = currentUserId;
+
     socket.on('connect', () => console.log('Connected to the server'));
     socket.on('connect_error', (error) => console.error('Connection Error:', error));
     socket.on('error', (error) => console.error('Socket.IO Error:', error));
-
-    socket.on('newPlayer', (newPlayer) => {
-      setPlayers(currentPlayers => [...currentPlayers, newPlayer]);
-    });
 
     socket.on('allPlayers', (players) => {
       setPlayers(players);
     });
 
-    socket.on('connectedUsers', (userIds) => {
-      setConnectedUsers(userIds);
-    });
-
     socket.on('playerSocketId', (id) => {
+      console.log('Received socket ID from server:', id);
       setCurrentUserId(id);
+      currentUserIdRef.current = id; // Update ref immediately
     });
 
     socket.on('preFlop', (data) => {
       console.log("Received pre-flop");
       const { playerHandImages, playerHandNames } = data;
-    
+      console.log(playerHandImages);
+      console.log(playerHandNames);
       setPlayers(currentPlayers => currentPlayers.map(player => {
-        if (player.socketId === currentUserId) {
-          return {
+        if (player.socketId === currentUserIdRef.current) {
+          const updatedPlayer = {
             ...player,
-            cardImages: playerHandImages,
+            cardImages: playerHandImages, // use the updated file paths
             cardNames: playerHandNames
           };
+          console.log('Updated player:', updatedPlayer); // Log the updated player object
+          return updatedPlayer;
         }
         return player;
       }));
-    });    
+    });  
 
     socket.on('flop', (data) => {
       const { flopImages } = data;
@@ -100,66 +78,39 @@ function App() {
       setCommunityCards(existingCards => [...existingCards, { image: riverImage }]);
     });
 
-    socket.on('actionUpdate', (data) => {
-      const { playerId, action, amount } = data;
-    
-      // Assuming you have a function to update the player's status
-      // and handle the bet amount display if the action is a bet
-      console.log(playerId, action, amount);
-      if (action === 'bet' && amount) {
-        updatePlayerStatus(playerId, `Bet ${amount}`);
-      } else {
-        updatePlayerStatus(playerId, action);
-      }
-    });   
-
     return () => {
       // Disconnect event listeners
       socket.off('connect');
       socket.off('connect_error');
       socket.off('error');
-      socket.off('newPlayer');
+      socket.off('allPlayers');
       socket.off('playerSocketId');
-      socket.off('connectedUsers');
       socket.off('preFlop');
       socket.off('flop');
       socket.off('turn');
       socket.off('river');
     };
-  }, []);
-
-  const updatePlayerStatus = (playerId, status) => {
-    setPlayers(currentPlayers => currentPlayers.map(player => {
-      if (player.socketId === playerId) {
-        return { ...player, status: status };
-      }
-      return player;
-    }));
-  }; 
+  }, [currentUserId, players]);
   
   // Handlers for button clicks
-  const handleCall = () => {
+  const handleCall = (bet) => {
     console.log('Call');
-    socket.emit('action', { action: 'call', playerId: currentUserId });
-    updatePlayerStatus(currentUserId, 'Call');
+    socket.emit('action', { action: 'call', amount: bet, playerId: currentUserId });
   };
   
   const handleCheck = () => {
     console.log('Check');
-    socket.emit('action', { action: 'check', playerId: currentUserId });
-    updatePlayerStatus(currentUserId, 'Check');
+    socket.emit('action', { action: 'check', amount: 0, playerId: currentUserId });
   };
 
   const handleFold = () => {
     console.log('Fold');
-    socket.emit('action', { action: 'fold', playerId: currentUserId });
-    updatePlayerStatus(currentUserId, 'Fold');
+    socket.emit('action', { action: 'fold', amount: 0, playerId: currentUserId });
   };
 
   const handleBetConfirm = (amount) => {
     console.log(`Raise to ${amount}`);
     socket.emit('action', { action: 'bet', amount: amount, playerId: currentUserId });
-    updatePlayerStatus(currentUserId, 'Bet ' + amount);
     setIsRaising(false); // Hide betting screen after confirming the bet
   };
 
@@ -176,13 +127,17 @@ function App() {
       <GameStatus startingBigBlind={20} />
 
       {players.map((player, index) => {
-        const isCurrentPlayer = player.socketId === currentUserId;
+        const isCurrentPlayer = player.socketId === currentUserIdRef.current;
+        console.log('player.socketId:', player.socketId);
+        console.log('currentUserIdRef.current:', currentUserIdRef.current);
+        console.log('isCurrentPlayer:', isCurrentPlayer);
+        console.log('player.cardImages:', player.cardImages);
 
         return (
           <Player
             key={player.socketId}
             name={player.name}
-            cardImages={isCurrentPlayer ? player.cardImages : [process.env.PUBLIC_URL + '/assets/card_backside.jpg', process.env.PUBLIC_URL + '/assets/card_backside.jpg']}
+            cardImages={isCurrentPlayer ? player.cardImages : ['/assets/card_backside.jpg', '/assets/card_backside.jpg']}
             chips={player.chips}
             status={player.status}
           />

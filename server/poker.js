@@ -30,6 +30,10 @@ class Poker {
         this.deck = new Deck();
         this.deck.shuffle();
         this.board = new Board();
+
+        this.startingBigBlind = 20;
+        this.currentBigBlind = this.startingBigBlind;
+
         this.players = [];
         for (let i = 1; i <= numPlayers; i++) {
             this.players.push(new Player("Player " + i, stackSize));

@@ -52,7 +52,7 @@ class Deck {
         for (let suit of suits) {
             for (let rank = 14; rank >= 2; rank--) {
                 const cardName = `${rankNames[rank]} Of ${suit}`;
-                const imagePath = `assets/${suit.toLowerCase()}_${rankNames[rank].toLowerCase()}.png`;
+                const imagePath = `/assets/${suit.toLowerCase()}_${rankNames[rank].toLowerCase()}.png`;
                 this.cards.push(new Card(suit, rank, cardName, imagePath));
             }
         }
@@ -77,11 +77,29 @@ class Deck {
 }
 
 class Player {
-    constructor(name, stack, socketId) {
+    constructor(name, chips, socketId) {
         this.name = name;
-        this.hand = [];
-        this.stack = stack;
+        this.cardImages = [],
+        this.cardNames = [],
+        this.chips = chips;
+        this.status = '';
+        this.betAmount = 0;
         this.socketId = socketId;
+
+        this.hand = [];
+    }
+
+    updateBetAmount(amount) {
+        this.betAmount = amount;
+        this.chips -= amount;
+    }
+
+    updatePlayerStatus(status) {
+        this.status = status;
+    }
+
+    getPlayerStatus() {
+        return this.status;
     }
 
     draw(card) {

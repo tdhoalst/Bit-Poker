@@ -1,4 +1,3 @@
-require('dotenv').config(); // Use environment variables
 const express = require('express');
 const mongoose = require('mongoose');
 const http = require('http');
@@ -25,12 +24,12 @@ const io = socketIO(server, {
   }
 });
 
-const port = process.env.PORT || 3011; // Environment variable for port
+const port = 3011; // Default port
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost/mypokerdatabase', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+// Connect to MongoDB with a hardcoded URI
+mongoose.connect('mongodb://localhost/mypokerdatabase', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
 })
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('MongoDB connection error:', err));
@@ -45,10 +44,15 @@ const Action = mongoose.model('Action', actionSchema);
 class GameState {
   constructor() {
     this.connectedPlayers = [];
-    //this.userStatusMap = new Map();
+
+    this.startingBigBlind = 20;
+    this.currentBigBlind = this.startingBigBlind;
+
+    this.currentMinBet = 0;
+
     this.stage = 0;
     this.isStageIncremented = false;
-    this.poker = new Poker(2, 10000);
+    this.poker = new Poker(3, 10000);
   }
 
   addPlayer(player) {
@@ -63,21 +67,42 @@ class GameState {
     this.connectedPlayers = this.connectedPlayers.filter(player => player.socketId !== socketId);
   }
 
+  updatePlayerStatus(socketId, action, amount) {
+    let player = this.getPlayerBySocketId(socketId);
+    console.log(socketId, action, amount);
+
+    if (player) {
+        player.status = action;
+        if (action === 'bet' && amount) {
+          player.status = action + ' ' + amount;
+            player.betAmount = amount;
+            if (amount > this.currentMinBet) {
+                this.currentMinBet = amount;
+            }
+        }
+    }
+  }
+
   preFlopState() {
-    console.log("Emitting pre-flop");
     try {
         this.poker.preFlop();
 
-        this.poker.players.forEach(player => {
+
+        //ensure number of players is 2 (gamestate constructor)
+
+
+        for (let i = 0; i < this.connectedPlayers.length; i++) {
+            const player = this.poker.players[i];
             const playerHandImages = player.hand.map(card => card.imagePath);
             const playerHandNames = player.hand.map(card => card.name);
 
-            if (player.socketId && io.sockets.sockets.get(player.socketId)) {
-                io.to(player.socketId).emit('preFlop', { playerHandImages, playerHandNames });
-            } else {
-                console.error(`Socket ID not found for player: ${player.id}`);
-            }
-        });
+            this.connectedPlayers[i].cardImages = playerHandImages;
+            this.connectedPlayers[i].cardNames = playerHandNames;
+
+            console.log(this.connectedPlayers[i].socketId);
+            io.to(this.connectedPlayers[i].socketId).emit('preFlop', { playerHandImages, playerHandNames });
+            console.log("Emitting pre-flop");
+        }
     } catch (error) {
         console.error("Error in preFlopState:", error);
     }
@@ -85,11 +110,10 @@ class GameState {
 
   flopState() {
     console.log("Emitting flop");
-    this.poker.preFlop();
     this.poker.flop();
     const flopImages = this.poker.board.cards.slice(0, 3).map(card => card.imagePath);
     const flopNames = this.poker.board.cards.slice(0, 3).map(card => card.name);
-    io.emit('flop', { flopImages, flopNames});
+    io.emit('flop', { flopImages, flopNames });
   }
 
   turnState() {
@@ -114,7 +138,7 @@ class GameState {
   newHandState() {
     //clear board
     //clear player hands
-    //reset player status
+    //reset player status, bet amount, hasFolded
     //move list of connected players +1
     //reset stage
   }
@@ -142,8 +166,68 @@ class GameState {
     }
   }
   
-  //ADD NEW UPDATE STAGE METHOD HERE
+  playNewStage() {
+    if (this.stage === 1) { //pre-flop
+      let currentMaxBet = this.currentBigBlind;
+    } else {
+      let currentMaxBet = 0;
+    }
+    let lastRaiserIndex = -1;
+    let currentIndex = 0;
+    let firstLoop = true;
+
+    do {
+        let player = this.connectedPlayers[currentIndex];
+
+        if (!player.hasFolded) {
+            // Example: Handle player action based on their status
+            switch (player.status) {
+                case 'bet':
+                case 'raise':
+                    if (player.betAmount > currentMaxBet) {
+                        currentMaxBet = player.betAmount;
+                        lastRaiserIndex = currentIndex;
+                        console.log(`Player ${player.socketId} raised to ${player.betAmount}`);
+                        console.log('lastRaiserIndex: ' + lastRaiserIndex);
+                    }
+                    break;
+                case 'call':
+                    player.updateBetAmount(currentMaxBet);
+                    break;
+                case 'fold':
+                    player.hasFolded = true;
+                    break;
+                case 'check':
+                    if (currentMaxBet !== this.currentMinBet) {
+                        // Force player to either call, raise or fold
+                    }
+                    break;
+            }
+        }
+
+        currentIndex = (currentIndex + 1) % this.connectedPlayers.length;
+
+        // In the first loop, set lastRaiserIndex to the last player
+        if (firstLoop && currentIndex === 0) {
+            lastRaiserIndex = this.connectedPlayers.length - 1;
+            firstLoop = false;
+        }
+    } while (currentIndex !== lastRaiserIndex || currentMaxBet > this.currentMinBet);
+
+    // After the round, check if all players have called the current max bet
+    let allCalledOrFolded = this.connectedPlayers.every(player => 
+        player.hasFolded || player.betAmount === currentMaxBet
+    );
+
+    if (allCalledOrFolded) {
+        this.stage++;
+        this.handleGameStage();
+    } else {
+        console.log("Not all players have called the current max bet");
+      }
+  }
 }
+
 
 
 const gameState = new GameState();
@@ -162,42 +246,34 @@ const generateRandomName = () => {
 
 io.on('connection', (socket) => {
   console.log(`User ${socket.id} connected`);
-
   const playerName = generateRandomName();
-  const newPlayer = {
-    name: playerName,
-    cardImages: [],
-    cardNames: [],
-    chips: 5000,
-    status: '',
-    socketId: socket.id,
-  };
+  const newPlayer = new Player(playerName, 5000, socket.id);
 
   gameState.addPlayer(newPlayer);
-  // send list of conected players to client
-  socket.emit('allPlayers', gameState.connectedPlayers);
 
-  // socket.broadcast sends new player to all clients already connected, except sender
-  socket.broadcast.emit('newPlayer', newPlayer);
+  // send updated playerlist to all clients
+  io.emit('allPlayers', gameState.connectedPlayers);
 
   // Send the socket ID to the client (used to determine which hole cards to show which client)
   socket.emit('playerSocketId', socket.id);
 
   socket.on('action', (data) => {
-    // Prepare the data to be broadcasted
+    gameState.stage++;
+    console.log("Game stage: " + gameState.stage);
+    gameState.handleGameStage();
+
+    //update gamestate
+    gameState.updatePlayerStatus(socket.id, data.action, data.amount);
+    io.emit('allPlayers', gameState.connectedPlayers);
+
     const broadcastData = {
       playerId: data.playerId,
       action: data.action
     };
-
-    // If the action is a bet, include the amount in the broadcast
     if (data.action === 'bet' && data.amount) {
       broadcastData.amount = data.amount;
     }
     console.log(broadcastData);
-
-    // socket.broadcast.emit sends to all clients except the sender
-    socket.broadcast.emit('actionUpdate', broadcastData);
   });
 
   socket.on('disconnect', () => {
