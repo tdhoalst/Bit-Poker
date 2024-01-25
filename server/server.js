@@ -88,7 +88,7 @@ class GameState {
         this.poker.preFlop();
 
 
-        //ensure number of players is 2 (gamestate constructor)
+        //ensure number of players is 3 (gamestate constructor)
 
 
         for (let i = 0; i < this.connectedPlayers.length; i++) {
