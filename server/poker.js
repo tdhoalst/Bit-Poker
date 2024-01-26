@@ -40,6 +40,14 @@ class Poker {
         }
     }
 
+    addPlayer(player) {
+        this.players.push(player);
+    }
+
+    removePlayer(socketId) {
+        this.players = this.players.filter(player => player.socketId !== socketId);
+    }
+
     preFlop() {
         for (const player of this.players) {
             for (let i = 0; i < 2; i++) {

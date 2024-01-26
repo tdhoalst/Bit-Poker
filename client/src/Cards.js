@@ -1,11 +1,19 @@
 import React from 'react';
 import './Cards.css'; // Cards specific styles
 
-const Cards = ({ cardImages }) => {
+const Cards = ({ cardImages, cardNames }) => {
+
+  console.log('Card names:', cardNames);
+
   return (
     <div className="cards">
       {cardImages.map((image, index) => (
-        <img key={index} src={image} alt={`Card ${index}`} className={`card card-${index + 1}`} />
+        <img 
+          key={index} 
+          src={image} 
+          alt={cardNames[index]} 
+          className={`card card-${index + 1}`} 
+        />
       ))}
     </div>
   );

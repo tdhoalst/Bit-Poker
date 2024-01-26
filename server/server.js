@@ -52,19 +52,21 @@ class GameState {
 
     this.stage = 0;
     this.isStageIncremented = false;
-    this.poker = new Poker(3, 10000);
-  }
-
-  addPlayer(player) {
-    this.connectedPlayers.push(player);
+    this.poker = new Poker(0, 10000);
   }
 
   getPlayerBySocketId(socketId) {
     return this.connectedPlayers.find(player => player.socketId === socketId);
   }
 
+  addPlayer(player) {
+    this.connectedPlayers.push(player);
+    this.poker.addPlayer(player);
+  }
+
   removePlayerBySocketId(socketId) {
     this.connectedPlayers = this.connectedPlayers.filter(player => player.socketId !== socketId);
+    this.poker.removePlayer(socketId);
   }
 
   updatePlayerStatus(socketId, action, amount) {
@@ -86,23 +88,15 @@ class GameState {
   preFlopState() {
     try {
         this.poker.preFlop();
-
-
-        //ensure number of players is 3 (gamestate constructor)
-
-
         for (let i = 0; i < this.connectedPlayers.length; i++) {
             const player = this.poker.players[i];
             const playerHandImages = player.hand.map(card => card.imagePath);
             const playerHandNames = player.hand.map(card => card.name);
-
             this.connectedPlayers[i].cardImages = playerHandImages;
             this.connectedPlayers[i].cardNames = playerHandNames;
-
-            console.log(this.connectedPlayers[i].socketId);
             io.to(this.connectedPlayers[i].socketId).emit('preFlop', { playerHandImages, playerHandNames });
-            console.log("Emitting pre-flop");
         }
+        console.log("Emitting pre-flop");
     } catch (error) {
         console.error("Error in preFlopState:", error);
     }

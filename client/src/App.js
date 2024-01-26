@@ -138,6 +138,7 @@ function App() {
             key={player.socketId}
             name={player.name}
             cardImages={isCurrentPlayer ? player.cardImages : ['/assets/card_backside.jpg', '/assets/card_backside.jpg']}
+            cardNames={isCurrentPlayer ? player.cardNames : ['Card X', 'Card Y']}
             chips={player.chips}
             status={player.status}
           />
