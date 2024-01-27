@@ -81,43 +81,63 @@ class Poker {
         return this;
     }
 
-    hasRoyalFlush(playerHand) { 
+    hasRoyalFlush(playerHand) {
         const cards = playerHand.concat(this.board.cards);
-        const flushRanks = new Set(cards.filter(card => cards.filter(c => c.suit === card.suit).length >= 5).map(card => card.rank));
-        if (flushRanks.has(14) && flushRanks.has(13) && flushRanks.has(12) && flushRanks.has(11) && flushRanks.has(10)) {
-            return true;
+        // Group cards by suit
+        const suits = cards.reduce((acc, card) => {
+            if (!acc[card.suit]) {
+                acc[card.suit] = [];
+            }
+            acc[card.suit].push(card.rank);
+            return acc;
+        }, {});
+        // Check each suit for a Royal Flush
+        for (const suit in suits) {
+            const flushRanks = new Set(suits[suit]);
+            if (flushRanks.has(14) && flushRanks.has(13) && flushRanks.has(12) && flushRanks.has(11) && flushRanks.has(10)) {
+                return true;
+            }
         }
         return false;
     }
 
     hasStraightFlush(playerHand) {
         const cards = playerHand.concat(this.board.cards);
-        const flushCards = cards.filter(card => cards.filter(c => c.suit === card.suit).length >= 5);
-        if (flushCards.length >= 5) {
-            const flushRanks = flushCards.map(card => card.rank).sort((a, b) => a - b);
-            if(flushRanks.includes(14) && flushRanks.includes(2) && flushRanks.includes(3) && flushRanks.includes(4) && flushRanks.includes(5)) {
-                if(flushRanks.includes(6)) {
-                    if(flushRanks.includes(7)) {
-                        return [true, 7];
+        // Group cards by suit
+        const suits = cards.reduce((acc, card) => {
+            if (!acc[card.suit]) {
+                acc[card.suit] = [];
+            }
+            acc[card.suit].push(card.rank);
+            return acc;
+        }, {});
+        // Check each suit for a Straight Flush
+        for (const suit in suits) {
+            let ranks = suits[suit];
+            ranks = [...new Set(ranks)].sort((a, b) => a - b); // Remove duplicates and sort
+            if (ranks.includes(14)) {
+                ranks.push(1);
+            }
+            let maxStraightLength = 0;
+            let highCardInStraight = 0;
+            for (let i = 0; i < ranks.length - 1; i++) {
+                let currentLength = 1;
+                let currentHighCard = ranks[i];
+                for (let j = i + 1; j < ranks.length; j++) {
+                    if (ranks[j] === ranks[j - 1] + 1) {
+                        currentLength++;
+                        currentHighCard = ranks[j];
+                    } else {
+                        break;
                     }
-                    return [true, 6];
                 }
-                return [true, 5];
-            }
-            let maxConnectedCards = 0;
-            let numConnectedCards = 0;
-            for (let i = 0; i < flushRanks.length - 1; i++) {
-                if (flushRanks[i] === flushRanks[i + 1] - 1) {
-                    numConnectedCards++;
-                } else {
-                    numConnectedCards = 0;
-                }
-                if (numConnectedCards > maxConnectedCards) {
-                    maxConnectedCards = numConnectedCards;
+                if (currentLength > maxStraightLength) {
+                    maxStraightLength = currentLength;
+                    highCardInStraight = currentHighCard;
                 }
             }
-            if (maxConnectedCards >= 4) {
-                return [true, flushRanks[maxConnectedCards]];
+            if (maxStraightLength >= 5) {
+                return [true, highCardInStraight];
             }
         }
         return [false, null];
@@ -126,72 +146,114 @@ class Poker {
     hasFourOfAKind(playerHand) {
         const cards = playerHand.concat(this.board.cards);
         const ranks = cards.map(card => card.rank);
-        const quads = [...new Set(ranks.filter(rank => ranks.filter(r => r === rank).length === 4))];
-        if (quads.length > 0) {
-            const kicker = Math.max(...cards.filter(card => card.rank !== quads[0]).map(card => card.rank));
-            return [true, quads[0], kicker];
+        // Find if there are four cards of the same rank
+        for (let rank of new Set(ranks)) {
+            if (ranks.filter(r => r === rank).length === 4) {
+                // Find the highest card that's not part of the quads as the kicker
+                const kicker = Math.max(...cards.filter(card => card.rank !== rank).map(card => card.rank));
+                return [true, rank, kicker];
+            }
         }
         return [false, null, null];
     }
-
+    
     hasFullHouse(playerHand) {
         const cards = playerHand.concat(this.board.cards);
-        const ranks = cards.map(card => card.rank).sort((a, b) => a - b);
-        const threeOfAKind = [...new Set(ranks.filter(rank => ranks.filter(r => r === rank).length === 3))];
-        const pair = [...new Set(ranks.filter(rank => ranks.filter(r => r === rank).length >= 2 && rank !== threeOfAKind[0]))];
-        if (threeOfAKind.length > 0 && pair.length > 0) {
-            return [true, threeOfAKind[0], pair[0]];
+        const ranks = cards.map(card => card.rank);
+        let threeOfAKindRank = null;
+        let pairRank = null;
+        // First, check for three-of-a-kind
+        for (let rank of new Set(ranks)) {
+            if (ranks.filter(r => r === rank).length === 3) {
+                threeOfAKindRank = rank;
+                break;
+            }
+        }
+        // Then, check for a pair (that's not the same rank as the three-of-a-kind)
+        if (threeOfAKindRank !== null) {
+            for (let rank of new Set(ranks)) {
+                if (rank !== threeOfAKindRank && ranks.filter(r => r === rank).length >= 2) {
+                    pairRank = rank;
+                    break;
+                }
+            }
+        }
+        if (threeOfAKindRank !== null && pairRank !== null) {
+            return [true, threeOfAKindRank, pairRank];
         }
         return [false, null, null];
     }
 
     hasFlush(playerHand) {
         const cards = playerHand.concat(this.board.cards);
-        const flushSuit = cards.filter(card => cards.filter(c => c.suit === card.suit).length >= 5);
-        if (flushSuit.length >= 5) {
-            const flushRanks = flushSuit.map(card => card.rank).sort((a, b) => a - b);
-            return [true, flushranks[flushRanks.length -1]];
+        // Group cards by suit
+        const suits = cards.reduce((acc, card) => {
+            if (!acc[card.suit]) {
+                acc[card.suit] = [];
+            }
+            acc[card.suit].push(card);
+            return acc;
+        }, {});
+        // Check for a flush in any suit
+        for (const suit in suits) {
+            if (suits[suit].length >= 5) {
+                // Sort the cards of the flush suit by rank
+                const flushRanks = suits[suit].map(card => card.rank).sort((a, b) => b - a);
+                return [true, flushRanks[0]]; // Return true with the highest rank
+            }
         }
         return [false, []];
     }
 
     hasStraight(playerHand) {
         const cards = playerHand.concat(this.board.cards);
-        const ranks = cards.map(card => card.rank).sort((a, b) => a - b);
-        if(ranks.includes(14) && ranks.includes(2) && ranks.includes(3) && ranks.includes(4) && ranks.includes(5)) {
-            if(ranks.includes(6)) {
-                if(ranks.includes(7)) {
-                    return [true, 7];
-                }
-                return [true, 6];
-            }
-            return [true, 5];
+        let ranks = cards.map(card => card.rank);
+        ranks = [...new Set(ranks)].sort((a, b) => a - b); // Remove duplicates and sort
+        // Special handling for Ace (14) which can also be used as 1
+        if (ranks.includes(14)) {
+            ranks.push(1);
         }
-        let maxConnectedCards = 0;
-        let numConnectedCards = 0;
+        let maxStraightLength = 0;
+        let highCardInStraight = 0;
         for (let i = 0; i < ranks.length - 1; i++) {
-            if (ranks[i] === ranks[i + 1] - 1) {
-                numConnectedCards++;
-            } else {
-                numConnectedCards = 0;
+            let currentLength = 1;
+            let currentHighCard = ranks[i];
+            for (let j = i + 1; j < ranks.length; j++) {
+                if (ranks[j] === ranks[j - 1] + 1) {
+                    currentLength++;
+                    currentHighCard = ranks[j];
+                } else {
+                    break;
+                }
             }
-            if (numConnectedCards > maxConnectedCards) {
-                maxConnectedCards = numConnectedCards;
+            if (currentLength > maxStraightLength) {
+                maxStraightLength = currentLength;
+                highCardInStraight = currentHighCard;
             }
         }
-        if (maxConnectedCards >= 4) {
-            return [true, ranks[maxConnectedCards]];
+        if (maxStraightLength >= 5) {
+            return [true, highCardInStraight];
         }
         return [false, null];
     }
+    
 
     hasThreeOfAKind(playerHand) {
         const cards = playerHand.concat(this.board.cards);
         const ranks = cards.map(card => card.rank);
-        const threeOfAKind = [...new Set(ranks.filter(rank => ranks.filter(r => r === rank).length === 3))];
-        if (threeOfAKind.length > 0) {
-            const kickers = cards.filter(card => card.rank !== threeOfAKind[0]).sort((a, b) => b.rank - a.rank);
-            return [true, threeOfAKind[0], kickers[0].rank, kickers[1].rank];
+        let threeOfAKindRank = null;
+        let kickers = [];
+        // Find the highest three-of-a-kind
+        for (let rank of new Set(ranks).values()) {
+            if (ranks.filter(r => r === rank).length === 3) {
+                threeOfAKindRank = rank;
+                // Remove the three-of-a-kind cards from the kicker candidates
+                kickers = cards.filter(card => card.rank !== rank).sort((a, b) => b.rank - a.rank);
+                break;
+            }
+        }
+        if (threeOfAKindRank !== null) {
+            return [true, threeOfAKindRank, kickers[0].rank, kickers[1].rank];
         }
         return [false, null, null];
     }
@@ -199,10 +261,15 @@ class Poker {
     hasTwoPair(playerHand) {
         const cards = playerHand.concat(this.board.cards);
         const ranks = cards.map(card => card.rank);
-        const pairs = [...new Set(ranks.filter(rank => ranks.filter(r => r === rank).length === 2))];
+        let pairs = ranks.filter(rank => ranks.filter(r => r === rank).length === 2);
+        pairs = [...new Set(pairs)]; // Remove duplicates
         if (pairs.length >= 2) {
-            const kickers = cards.filter(card => card.rank !== pairs[0] && card.rank !== pairs[1]).sort((a, b) => b.rank - a.rank);
-            return [true, pairs[0], pairs[1], kickers[0].rank];
+            // Sort pairs in descending order and take the top two
+            pairs.sort((a, b) => b - a);
+            const topTwoPairs = pairs.slice(0, 2);
+            // Find the kicker (highest card not in the two pairs)
+            const kickers = cards.filter(card => !topTwoPairs.includes(card.rank)).sort((a, b) => b.rank - a.rank);
+            return [true, topTwoPairs[0], topTwoPairs[1], kickers[0].rank];
         }
         return [false, null, null, null];
     }
@@ -210,12 +277,17 @@ class Poker {
     hasOnePair(playerHand) {
         const cards = playerHand.concat(this.board.cards);
         const ranks = cards.map(card => card.rank);
-        const pair = [...new Set(ranks.filter(rank => ranks.filter(r => r === rank).length === 2))];
-        if (pair.length > 0) {
-            const kickers = cards.filter(card => card.rank !== pair[0]).sort((a, b) => b.rank - a.rank);
-            return [true, pair[0], kickers[0].rank, kickers[1].rank, kickers[2].rank];
+        let pairs = ranks.filter(rank => ranks.filter(r => r === rank).length === 2);
+        pairs = [...new Set(pairs)]; // Remove duplicates
+        if (pairs.length > 0) {
+            // Sort pairs in descending order to find the highest pair
+            pairs.sort((a, b) => b - a);
+            const highestPair = pairs[0];
+            // Find the top three kickers (highest cards not in the pair)
+            const kickers = cards.filter(card => card.rank !== highestPair).sort((a, b) => b.rank - a.rank);
+            return [true, highestPair, kickers[0].rank, kickers[1].rank, kickers[2].rank];
         }
-        return [false, null, null];
+        return [false, null, null, null, null];
     }
 
     hasHighCard(playerHand) {
