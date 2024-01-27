@@ -292,7 +292,7 @@ class Poker {
     hasHighCard(playerHand) {
         const cards = playerHand.concat(this.board.cards);
         const kickers = cards.sort((a, b) => b.rank - a.rank);
-        return [true, kickers[0].rank, kickers[1].rank, kickers[2].rank, kickers[3].rank, kickers[4].rank];
+        return [kickers[0].rank, kickers[1].rank, kickers[2].rank, kickers[3].rank, kickers[4].rank];
     }
 
     evaluateHand() {
@@ -350,10 +350,8 @@ class Poker {
                                             if (hasOnePair) {
                                                 handRanking = [2, pairRank, kicker1, kicker2, kicker3];
                                             } else {
-                                                const [hasHighCard, kicker1, kicker2, kicker3, kicker4, kicker5] = this.hasHighCard(player.hand);
-                                                if (hasHighCard) {
-                                                    handRanking = [1, kicker1, kicker2, kicker3, kicker4, kicker5];
-                                                }
+                                                const [kicker1, kicker2, kicker3, kicker4, kicker5] = this.hasHighCard(player.hand);
+                                                handRanking = [1, kicker1, kicker2, kicker3, kicker4, kicker5];
                                             }
                                         }
                                     }

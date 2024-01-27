@@ -222,8 +222,6 @@ class GameState {
   }
 }
 
-
-
 const gameState = new GameState();
 
 app.use(express.static('public'));
