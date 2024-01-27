@@ -77,10 +77,10 @@ class GameState {
         player.status = action;
         if (action === 'bet' && amount) {
           player.status = action + ' ' + amount;
-            player.betAmount = amount;
-            if (amount > this.currentMinBet) {
-                this.currentMinBet = amount;
-            }
+          player.betAmount = amount;
+          if (amount > this.currentMinBet) {
+              this.currentMinBet = amount;
+          }
         }
     }
   }
@@ -218,7 +218,7 @@ class GameState {
         this.handleGameStage();
     } else {
         console.log("Not all players have called the current max bet");
-      }
+    }
   }
 }
 
@@ -266,6 +266,7 @@ io.on('connection', (socket) => {
     };
     if (data.action === 'bet' && data.amount) {
       broadcastData.amount = data.amount;
+      io.emit('betMade', data.amount);
     }
     console.log(broadcastData);
   });

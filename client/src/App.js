@@ -21,12 +21,12 @@ function App() {
 
   const [communityCards, setCommunityCards] = useState([]);
 
+  const [pot, setPot] = useState(0);
+
   const [isRaising, setIsRaising] = useState(false); // State to control the display of the betting screen  
 
 
   useEffect(() => {
-    console.log('useeffect', players);
-
     currentUserIdRef.current = currentUserId;
 
     socket.on('connect', () => console.log('Connected to the server'));
@@ -41,6 +41,10 @@ function App() {
       console.log('Received socket ID from server:', id);
       setCurrentUserId(id);
       currentUserIdRef.current = id; // Update ref immediately
+    });
+
+    socket.on('betMade', (betAmount) => {
+      setPot(currentPot => Number(currentPot) + Number(betAmount));
     });
 
     socket.on('preFlop', (data) => {
@@ -63,19 +67,30 @@ function App() {
     });  
 
     socket.on('flop', (data) => {
-      const { flopImages } = data;
-      const updatedCards = flopImages.map(image => ({ image }));
+      const { flopImages, flopNames } = data;
+      const updatedCards = flopImages.map((image, index) => ({
+        image,
+        name: flopNames[index]
+      }));
       setCommunityCards(existingCards => [...existingCards, ...updatedCards]);
     });
 
     socket.on('turn', (data) => {
-      const { turnImage } = data;
-      setCommunityCards(existingCards => [...existingCards, { image: turnImage }]);
+      const { turnImage, turnName } = data;
+      const updatedCard = {
+        image: turnImage,
+        name: turnName
+      };
+      setCommunityCards(existingCards => [...existingCards, updatedCard]);
     });
   
     socket.on('river', (data) => {
-      const { riverImage } = data;
-      setCommunityCards(existingCards => [...existingCards, { image: riverImage }]);
+      const { riverImage, riverName } = data;
+      const updatedCard = {
+        image: riverImage,
+        name: riverName
+      };
+      setCommunityCards(existingCards => [...existingCards, updatedCard]);
     });
 
     return () => {
@@ -85,6 +100,7 @@ function App() {
       socket.off('error');
       socket.off('allPlayers');
       socket.off('playerSocketId');
+      socket.off('betMade');
       socket.off('preFlop');
       socket.off('flop');
       socket.off('turn');
@@ -128,11 +144,6 @@ function App() {
 
       {players.map((player, index) => {
         const isCurrentPlayer = player.socketId === currentUserIdRef.current;
-        console.log('player.socketId:', player.socketId);
-        console.log('currentUserIdRef.current:', currentUserIdRef.current);
-        console.log('isCurrentPlayer:', isCurrentPlayer);
-        console.log('player.cardImages:', player.cardImages);
-
         return (
           <Player
             key={player.socketId}
@@ -144,6 +155,10 @@ function App() {
           />
         );
       })}
+
+      <div className="pot-display">
+        Pot: ${pot} 
+      </div>
 
       <Board cards={communityCards} />
 

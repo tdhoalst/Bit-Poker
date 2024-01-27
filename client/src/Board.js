@@ -1,14 +1,22 @@
 import React from 'react';
-import './Board.css'; // Make sure to create this CSS file for styling
+import './Board.css'; // Ensure your CSS file includes styles for the new elements
 
 const Board = ({ cards }) => {
+  // Ensure cards is an array before attempting to use map
+  if (!Array.isArray(cards)) {
+    return <div className="board">Loading cards...</div>;
+  }
+
   return (
     <div className="board">
       {cards.map((card, index) => (
-        <img key={index} src={card.image} alt={`Card ${index}`} className="community-card" />
+        <div key={index} className="card-container">
+          <img src={card.image} alt={card.name} className="community-card" />
+        </div>
       ))}
     </div>
   );
 };
 
 export default Board;
+
