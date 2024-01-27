@@ -237,7 +237,6 @@ class Poker {
         return [false, null];
     }
     
-
     hasThreeOfAKind(playerHand) {
         const cards = playerHand.concat(this.board.cards);
         const ranks = cards.map(card => card.rank);
