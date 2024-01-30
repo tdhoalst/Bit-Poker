@@ -50,6 +50,8 @@ class GameState {
 
     this.currentMinBet = 0;
 
+    this.pot = 0;
+
     this.stage = 0;
     this.isStageIncremented = false;
     this.poker = new Poker(0, 10000);
@@ -71,17 +73,22 @@ class GameState {
 
   updatePlayerStatus(socketId, action, amount) {
     let player = this.getPlayerBySocketId(socketId);
-    console.log(socketId, action, amount);
-
     if (player) {
         player.status = action;
         if (action === 'bet' && amount) {
-          player.status = action + ' ' + amount;
-          player.betAmount = amount;
-          if (amount > this.currentMinBet) {
-              this.currentMinBet = amount;
-          }
+          player.status = action + ' $' + amount;
         }
+        if (action === 'call' && amount) {
+          player.status = action + ' $' + amount;
+        }
+    }
+  }
+
+  updatePlayerChips(socketId, amount) {
+    let player = this.getPlayerBySocketId(socketId);
+    if (player) {
+        player.chips -= amount - player.betAmount;
+        player.betAmount = amount;
     }
   }
 
@@ -125,19 +132,33 @@ class GameState {
   }
 
   showdownState() {
-    this.poker.evaluateHand(); 
-    // io.emit('showdown', { winner, potsize });
+    const handResult = this.poker.evaluateHand();
+    const { message, winner, winners } = handResult;
+    if (winner) {
+        // Single winner scenario
+        winner.chips += this.pot;
+        io.emit('showdown', { message });
+    } else if (winners && winners.length > 0) {
+        // Split pot scenario
+        const splitPotAmount = this.pot / winners.length;
+        winners.forEach(winner => {
+            winner.chips += splitPotAmount;
+        });
+        io.emit('showdown', { message });
+    } else {
+        // No winner (should not happen, but good to handle this case)
+        console.log("Error: No winner identified in showdown");
+    }
+    io.emit('allPlayers', gamestate.connectedPlayers);
   }
 
-  newHandState() {
-    //clear board
-    //clear player hands
-    //reset player status, bet amount, hasFolded
-    //move list of connected players +1
-    //reset stage
-  }
-
-  handleGameStage() {
+  handleNewStage() {
+    this.currentMinBet = 0;
+    for (let i = 0; i < this.connectedPlayers.length; i++) {
+        this.connectedPlayers[i].status = '';
+        this.connectedPlayers[i].betAmount = 0;
+    }
+    io.emit('allPlayers', gamestate.connectedPlayers);
     console.log("Handling game stage");
     switch (this.stage) {
         case 1:
@@ -155,74 +176,58 @@ class GameState {
         case 5:
             this.showdownState();
             break;
+        case 6:
+            this.newHandState();
+            var emptyString = "";
+            io.emit('showdown', { emptyString });
+            io.emit('newHand');
         default:
             console.log("Invalid game stage");
     }
   }
-  
-  playNewStage() {
-    if (this.stage === 1) { //pre-flop
-      let currentMaxBet = this.currentBigBlind;
-    } else {
-      let currentMaxBet = 0;
-    }
-    let lastRaiserIndex = -1;
+
+  checkStageUpdate() {
+    let allCalledOrFolded = true;
     let currentIndex = 0;
-    let firstLoop = true;
-
+    const startingIndex = 0; // Since you start checking from index 0
+  
     do {
-        let player = this.connectedPlayers[currentIndex];
-
-        if (!player.hasFolded) {
-            // Example: Handle player action based on their status
-            switch (player.status) {
-                case 'bet':
-                case 'raise':
-                    if (player.betAmount > currentMaxBet) {
-                        currentMaxBet = player.betAmount;
-                        lastRaiserIndex = currentIndex;
-                        console.log(`Player ${player.socketId} raised to ${player.betAmount}`);
-                        console.log('lastRaiserIndex: ' + lastRaiserIndex);
-                    }
-                    break;
-                case 'call':
-                    player.updateBetAmount(currentMaxBet);
-                    break;
-                case 'fold':
-                    player.hasFolded = true;
-                    break;
-                case 'check':
-                    if (currentMaxBet !== this.currentMinBet) {
-                        // Force player to either call, raise or fold
-                    }
-                    break;
-            }
-        }
-
-        currentIndex = (currentIndex + 1) % this.connectedPlayers.length;
-
-        // In the first loop, set lastRaiserIndex to the last player
-        if (firstLoop && currentIndex === 0) {
-            lastRaiserIndex = this.connectedPlayers.length - 1;
-            firstLoop = false;
-        }
-    } while (currentIndex !== lastRaiserIndex || currentMaxBet > this.currentMinBet);
-
-    // After the round, check if all players have called the current max bet
-    let allCalledOrFolded = this.connectedPlayers.every(player => 
-        player.hasFolded || player.betAmount === currentMaxBet
-    );
-
-    if (allCalledOrFolded) {
-        this.stage++;
-        this.handleGameStage();
+      const player = this.connectedPlayers[currentIndex];
+  
+      if ((player.status !== 'fold' && player.betAmount !== this.currentMinBet) || player.status === ''){
+        allCalledOrFolded = false;
+        break;
+      }
+  
+      currentIndex = (currentIndex + 1) % this.connectedPlayers.length;
+    } while (currentIndex !== startingIndex);
+  
+    if(allCalledOrFolded) {
+      console.log("All players have called or folded");
+      this.stage++;
+      this.handleNewStage();
     } else {
-        console.log("Not all players have called the current max bet");
+      console.log("Not all players have called or folded");
     }
+  }
+
+  newHandState() {
+    console.log("New Hand State");
+    for (let i = 0; i < this.connectedPlayers.length; i++) {
+      this.connectedPlayers[i].cardImages = [];
+      this.connectedPlayers[i].cardNames = [];
+      this.connectedPlayers[i].hand = [];
+    }
+    io.emit('allPlayers', gamestate.connectedPlayers);
+    this.poker.board = new Board();
+    this.poker.deck = new Deck();
+    this.poker.deck.shuffle();
+    this.stage = 1;
+    this.handleNewStage();
   }
 }
 
-const gameState = new GameState();
+const gamestate = new GameState();
 
 app.use(express.static('public'));
 app.use(express.json());
@@ -241,38 +246,54 @@ io.on('connection', (socket) => {
   const playerName = generateRandomName();
   const newPlayer = new Player(playerName, 5000, socket.id);
 
-  gameState.addPlayer(newPlayer);
+  gamestate.addPlayer(newPlayer);
 
   // send updated playerlist to all clients
-  io.emit('allPlayers', gameState.connectedPlayers);
+  io.emit('allPlayers', gamestate.connectedPlayers);
 
   // Send the socket ID to the client (used to determine which hole cards to show which client)
   socket.emit('playerSocketId', socket.id);
 
   socket.on('action', (data) => {
-    gameState.stage++;
-    console.log("Game stage: " + gameState.stage);
-    gameState.handleGameStage();
-
-    //update gamestate
-    gameState.updatePlayerStatus(socket.id, data.action, data.amount);
-    io.emit('allPlayers', gameState.connectedPlayers);
-
-    const broadcastData = {
+   const broadcastData = {
       playerId: data.playerId,
       action: data.action
     };
     if (data.action === 'bet' && data.amount) {
-      broadcastData.amount = data.amount;
-      io.emit('betMade', data.amount);
+      const amount = Number(data.amount); // Convert to number
+      broadcastData.amount = amount;
+      gamestate.updatePlayerStatus(socket.id, data.action, amount);
+      gamestate.updatePlayerChips(socket.id, amount);
+      gamestate.pot += amount;
+      io.emit('betMade', amount);
+      if (amount > gamestate.currentMinBet) {
+        gamestate.currentMinBet = amount;
+      }
+    }
+    if (data.action === 'call') {
+      const callAmount = Number(gamestate.currentMinBet); // Convert to number
+      broadcastData.amount = callAmount;
+      gamestate.updatePlayerStatus(socket.id, data.action, callAmount);
+      gamestate.updatePlayerChips(socket.id, callAmount);
+      gamestate.pot += callAmount;
+      io.emit('betMade', callAmount);
+    }
+    if(data.action === 'check') {
+      gamestate.updatePlayerStatus(socket.id, data.action);
+    }
+    if(data.action === 'fold') {
+      gamestate.updatePlayerStatus(socket.id, data.action);
     }
     console.log(broadcastData);
+    io.emit('allPlayers', gamestate.connectedPlayers);
+
+    gamestate.checkStageUpdate();
   });
 
   socket.on('disconnect', () => {
     console.log(`User ${socket.id} disconnected`);
-    gameState.removePlayerBySocketId(socket.id);
-    io.emit('allPlayers', gameState.connectedPlayers); // io.emit sends to all clients
+    gamestate.removePlayerBySocketId(socket.id);
+    io.emit('allPlayers', gamestate.connectedPlayers); // io.emit sends to all clients
   });
 });
 

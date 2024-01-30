@@ -197,13 +197,14 @@ class Poker {
         // Check for a flush in any suit
         for (const suit in suits) {
             if (suits[suit].length >= 5) {
-                // Sort the cards of the flush suit by rank
-                const flushRanks = suits[suit].map(card => card.rank).sort((a, b) => b - a);
-                return [true, flushRanks[0]]; // Return true with the highest rank
+                // Sort the cards of the flush suit by rank, in descending order
+                const sortedFlushCards = suits[suit].sort((a, b) => b.rank - a.rank);
+                // Return the sorted flush cards
+                return sortedFlushCards;
             }
         }
-        return [false, []];
-    }
+        return [];
+    }    
 
     hasStraight(playerHand) {
         const cards = playerHand.concat(this.board.cards);
@@ -308,12 +309,12 @@ class Poker {
             2: 'One Pair',
             1: 'High Card'
         };
-
+    
         const scores = [];
-
+    
         for (const player of this.players) {
             let handRanking;
-
+    
             const royalFlush = this.hasRoyalFlush(player.hand);
             if (royalFlush) {
                 handRanking = [10];
@@ -350,8 +351,8 @@ class Poker {
                                             if (hasOnePair) {
                                                 handRanking = [2, pairRank, kicker1, kicker2, kicker3];
                                             } else {
-                                                const [kicker1, kicker2, kicker3, kicker4, kicker5] = this.hasHighCard(player.hand);
-                                                handRanking = [1, kicker1, kicker2, kicker3, kicker4, kicker5];
+                                                const highCards = this.hasHighCard(player.hand);
+                                                handRanking = [1, ...highCards];
                                             }
                                         }
                                     }
@@ -361,25 +362,38 @@ class Poker {
                     }
                 }
             }
-            scores.push(handRanking);
+            scores.push({ player, handRanking });
         }
-
+    
         console.log("EVALUEATED HANDS");
         for (const score of scores) {
             console.log(score);
         }
         console.log("EVALUEATED HANDS");
-
-        const maxHandRank = scores.reduce((prev, current) => (prev[0] > current[0] ? prev : current), [0]);
-        
-        if (maxHandRank !== null) {
-            const highestRanking = maxHandRank[0];
-            const playerIndex = scores.findIndex(hand => hand[0] === highestRanking);
-            console.log(this.players[playerIndex].name + ' wins with ' + handRatings[highestRanking]);
+        // Sort scores by hand rank and kickers
+        scores.sort((a, b) => {
+            for (let i = 0; i < Math.min(a.handRanking.length, b.handRanking.length); i++) {
+                if (a.handRanking[i] !== b.handRanking[i]) {
+                    return b.handRanking[i] - a.handRanking[i];
+                }
+            }
+            return 0;
+        });
+    
+        // Check for ties
+        const highestHand = scores[0].handRanking;
+        const winners = scores.filter(score => JSON.stringify(score.handRanking) === JSON.stringify(highestHand));
+    
+        if (winners.length === 1) {
+            const winningMessage = winners[0].player.name + ' wins with ' + handRatings[highestHand[0]];
+            console.log(winningMessage);
+            return { message: winningMessage, winner: winners[0].player };
         } else {
-            console.log("Split pot. It's a draw!");
+            const winningMessage = "Split pot between " + winners.map(winner => winner.player.name).join(", ") + ".";
+            console.log(winningMessage);
+            return { message: winningMessage, winners: winners.map(winner => winner.player) };
         }
-    }
+    }   
 }
 
 module.exports = { Poker, Board };

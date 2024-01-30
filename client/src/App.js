@@ -21,6 +21,8 @@ function App() {
 
   const [communityCards, setCommunityCards] = useState([]);
 
+  const [winnerMessage, setWinnerMessage] = useState('');
+
   const [pot, setPot] = useState(0);
 
   const [isRaising, setIsRaising] = useState(false); // State to control the display of the betting screen  
@@ -93,6 +95,17 @@ function App() {
       setCommunityCards(existingCards => [...existingCards, updatedCard]);
     });
 
+    socket.on('showdown', (data) => {
+      const { message } = data;
+      setWinnerMessage(message);
+    });
+
+    socket.on('newHand', () => {
+      setCommunityCards([]);
+      setWinnerMessage('');
+      setPot(0);
+    });
+
     return () => {
       // Disconnect event listeners
       socket.off('connect');
@@ -105,13 +118,15 @@ function App() {
       socket.off('flop');
       socket.off('turn');
       socket.off('river');
+      socket.off('showdown');
+      socket.off('newHand');
     };
   }, [currentUserId, players]);
   
   // Handlers for button clicks
-  const handleCall = (bet) => {
+  const handleCall = () => {
     console.log('Call');
-    socket.emit('action', { action: 'call', amount: bet, playerId: currentUserId });
+    socket.emit('action', { action: 'call', playerId: currentUserId });
   };
   
   const handleCheck = () => {
@@ -161,6 +176,10 @@ function App() {
       </div>
 
       <Board cards={communityCards} />
+
+      <div className="winner-message">
+        {winnerMessage}
+      </div>
 
       {!isRaising && (
         <ActionButtons
