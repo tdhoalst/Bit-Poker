@@ -8,6 +8,7 @@
   align-items: center;
   justify-content: space-between; /* Adjust as needed */
   background: rgba(0, 0, 0, .85); /* Semi-transparent black background */
+  /* background-image: url('/Users/tannerhoalst/Desktop/poker-app/client/public/assets/cover.jpg'); */
   border-radius: 9px;
   padding: 2px;
   margin: 1px;
@@ -44,7 +45,7 @@
   /*bottom: 0px; /* this interfears with margin-top ?? */
   margin-top: -25px;
   margin-left: 260px; /* Space between player info and status */
-  color: black; /* Style the color of your status text */
+  color: white; /* Style the color of your status text */
   text-transform: uppercase;
   text-align: left;
 }

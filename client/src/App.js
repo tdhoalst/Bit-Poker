@@ -7,11 +7,13 @@ import ActionButtons from './ActionButtons';
 import BettingScreen from './BettingScreen';
 import GameStatus from './GameStatus';
 import Board from './Board';
+
+import PokerTable from './PokerTable';
+
 import './App.css';
 
 const SOCKET_URL = "http://localhost:3011";
 const socket = io(SOCKET_URL);
-
 
 function App() {
   const [currentUserId, setCurrentUserId] = useState(''); // State to store the current user's socket ID (used to dislay right cards for each player)
@@ -156,31 +158,36 @@ function App() {
   return (
     <div className="App">
       <GameStatus startingBigBlind={20} />
-
-      {players.map((player, index) => {
-        const isCurrentPlayer = player.socketId === currentUserIdRef.current;
-        return (
-          <Player
-            key={player.socketId}
-            name={player.name}
-            cardImages={isCurrentPlayer ? player.cardImages : ['/assets/card_backside.jpg', '/assets/card_backside.jpg']}
-            cardNames={isCurrentPlayer ? player.cardNames : ['Card X', 'Card Y']}
-            chips={player.chips}
-            status={player.status}
-          />
-        );
-      })}
-
-      <div className="pot-display">
-        Pot: ${pot} 
-      </div>
-
-      <Board cards={communityCards} />
-
+  
+      <PokerTable>
+        {players.map((player, index) => {
+          const isCurrentPlayer = player.socketId === currentUserIdRef.current;
+          const playerPosition = `player-position-${index}`; // This class will be used for positioning
+          
+          return (
+            <div key={player.socketId} className={playerPosition}>
+              <Player
+                name={player.name}
+                cardImages={isCurrentPlayer ? player.cardImages : ['/assets/card_backside.jpg', '/assets/card_backside.jpg']}
+                cardNames={isCurrentPlayer ? player.cardNames : ['Card X', 'Card Y']}
+                chips={player.chips}
+                status={player.status}
+              />
+            </div>
+          );
+        })}
+  
+        <div className="pot-display">
+          Pot: ${pot}
+        </div>
+  
+        <Board cards={communityCards} />
+      </PokerTable>
+  
       <div className="winner-message">
         {winnerMessage}
       </div>
-
+  
       {!isRaising && (
         <ActionButtons
           onRaise={handleRaise}
@@ -189,7 +196,7 @@ function App() {
           onFold={handleFold}
         />
       )}
-
+  
       {isRaising && (
         <BettingScreen
           onRaiseConfirm={handleBetConfirm}
@@ -197,7 +204,7 @@ function App() {
         />
       )}
     </div>
-  );
+  );  
 }
 
 export default App;
