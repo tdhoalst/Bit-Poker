@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between; /* Adjust as needed */
-  background: rgba(0, 0, 0, .85); /* Semi-transparent black background */
+  background: rgba(0, 0, 0, 0); /* Semi-transparent black background = (0, 0, 0, .85) */
   /* background-image: url('/Users/tannerhoalst/Desktop/poker-app/client/public/assets/cover.jpg'); */
   border-radius: 9px;
   padding: 2px;

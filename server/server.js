@@ -89,6 +89,9 @@ class GameState {
     if (player) {
         player.chips -= amount - player.betAmount;
         player.betAmount = amount;
+        if (player.chips == 0) {
+            player.status = 'all in $' + player.betAmount;
+        }
     }
   }
 
@@ -155,8 +158,10 @@ class GameState {
   handleNewStage() {
     this.currentMinBet = 0;
     for (let i = 0; i < this.connectedPlayers.length; i++) {
+      if (!this.connectedPlayers[i].status.includes('all in')) {
         this.connectedPlayers[i].status = '';
         this.connectedPlayers[i].betAmount = 0;
+      }
     }
     io.emit('allPlayers', gamestate.connectedPlayers);
     console.log("Handling game stage");
@@ -184,6 +189,7 @@ class GameState {
         default:
             console.log("Invalid game stage");
     }
+    this.checkStageUpdate(); // Check for all ins
   }
 
   checkStageUpdate() {
@@ -194,7 +200,8 @@ class GameState {
     do {
       const player = this.connectedPlayers[currentIndex];
   
-      if ((player.status !== 'fold' && player.betAmount !== this.currentMinBet) || player.status === ''){
+      if (((player.status !== 'fold' && player.betAmount !== this.currentMinBet) && (!player.status.includes('all in') || this.stage == 5)) || player.status === ''){
+        console.log(player.status, player.betAmount, this.currentMinBet, player.chips);
         allCalledOrFolded = false;
         break;
       }
@@ -223,7 +230,12 @@ class GameState {
     this.poker.deck = new Deck();
     this.poker.deck.shuffle();
     this.stage = 1;
-    this.handleNewStage();
+    this.pot = 0;
+    this.currentMinBet = 0;
+    this.poker.players.forEach(player => {
+      player.betAmount = 0;
+      player.status = '';
+    });
   }
 }
 

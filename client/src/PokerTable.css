@@ -11,8 +11,9 @@
 
     margin: auto; /* Center the table on the page */
     aspect-ratio: 2 / 1; /* Oval shape aspect ratio */
-    background-color: darkgreen; /* Typical poker table color */
+    background-color: rgb(0, 0, 0); /* Typical poker table color */
     border: 1px solid #000; /* Optional: adds a border around the table */
+    border: 5px solid #2b00ff; /* Optional: adds a border around the table */
     border-radius: 50% / 25%; /* Horizontal radius / Vertical radius */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Optional: adds some depth */
     overflow: visible; /* Ensures player containers can flow over the edge */
@@ -23,6 +24,7 @@
     left: 50%;
     transform: translateX(-50%);
     bottom: 65%;
+    color: white;
     /* Additional styling as needed */
 }
 
