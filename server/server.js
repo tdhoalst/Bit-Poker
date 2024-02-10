@@ -89,9 +89,6 @@ class GameState {
     if (player) {
         player.chips -= amount - player.betAmount;
         player.betAmount = amount;
-        if (player.chips == 0) {
-            player.status = 'all in $' + player.betAmount;
-        }
     }
   }
 
@@ -139,7 +136,7 @@ class GameState {
     const { message, winner, winners } = handResult;
     if (winner) {
         // Single winner scenario
-        winner.chips += this.pot;
+        winner.chipsWon = this.pot;
         io.emit('showdown', { message });
     } else if (winners && winners.length > 0) {
         // Split pot scenario
@@ -153,18 +150,65 @@ class GameState {
         console.log("Error: No winner identified in showdown");
     }
     io.emit('allPlayers', gamestate.connectedPlayers);
+    //preNewHandState(winner, winners);
+  }
+
+  preNewHandState(winner, winners) {
+    if (winner) {
+      // Single winner scenario
+      winner.chips += this.pot;
+      io.emit('showdown', { message });
+  } else if (winners && winners.length > 0) {
+      // Split pot scenario
+      const splitPotAmount = this.pot / winners.length;
+      winners.forEach(winner => {
+          winner.chips += splitPotAmount;
+      });
+      io.emit('showdown', { message });
+  } else {
+      // No winner (should not happen, but good to handle this case)
+      console.log("Error: No winner identified in showdown");
+  }
+  io.emit('allPlayers', gamestate.connectedPlayers);
+  }
+  
+
+  newHandState() {
+    
+
+    //add chips here
+
+
+    console.log("New Hand State");
+    for (let i = 0; i < this.connectedPlayers.length; i++) {
+      this.connectedPlayers[i].cardImages = [];
+      this.connectedPlayers[i].cardNames = [];
+      this.connectedPlayers[i].hand = [];
+      this.connectedPlayers[i].chipsWon = 0;
+    }
+    io.emit('allPlayers', gamestate.connectedPlayers);
+    this.poker.board = new Board();
+    this.poker.deck = new Deck();
+    this.poker.deck.shuffle();
+    this.stage = 1;
+    this.pot = 0;
+    this.currentMinBet = 0;
+    this.poker.players.forEach(player => {
+      player.betAmount = 0;
+      player.status = '';
+    });
   }
 
   handleNewStage() {
     this.currentMinBet = 0;
     for (let i = 0; i < this.connectedPlayers.length; i++) {
-      if (!this.connectedPlayers[i].status.includes('all in')) {
+      if (!this.connectedPlayers[i].chips == 0) {
         this.connectedPlayers[i].status = '';
         this.connectedPlayers[i].betAmount = 0;
       }
     }
     io.emit('allPlayers', gamestate.connectedPlayers);
-    console.log("Handling game stage");
+    console.log("Handling game stage", this.stage);
     switch (this.stage) {
         case 1:
             this.preFlopState();
@@ -200,7 +244,7 @@ class GameState {
     do {
       const player = this.connectedPlayers[currentIndex];
   
-      if (((player.status !== 'fold' && player.betAmount !== this.currentMinBet) && (!player.status.includes('all in') || this.stage == 5)) || player.status === ''){
+      if (((player.status !== 'fold' && player.betAmount !== this.currentMinBet) && (!player.chips === 0 || this.stage == 5)) || player.status === ''){
         console.log(player.status, player.betAmount, this.currentMinBet, player.chips);
         allCalledOrFolded = false;
         break;
@@ -216,26 +260,6 @@ class GameState {
     } else {
       console.log("Not all players have called or folded");
     }
-  }
-
-  newHandState() {
-    console.log("New Hand State");
-    for (let i = 0; i < this.connectedPlayers.length; i++) {
-      this.connectedPlayers[i].cardImages = [];
-      this.connectedPlayers[i].cardNames = [];
-      this.connectedPlayers[i].hand = [];
-    }
-    io.emit('allPlayers', gamestate.connectedPlayers);
-    this.poker.board = new Board();
-    this.poker.deck = new Deck();
-    this.poker.deck.shuffle();
-    this.stage = 1;
-    this.pot = 0;
-    this.currentMinBet = 0;
-    this.poker.players.forEach(player => {
-      player.betAmount = 0;
-      player.status = '';
-    });
   }
 }
 

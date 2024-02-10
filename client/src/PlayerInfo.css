@@ -1,26 +1,42 @@
-/* PlayerInfo.css */
 .player-info {
-    background-color: #D3D3D3;
-    color: black;
-    padding: 8px;
-    border-radius: 10px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-width: 120px; /* Adjust as needed */
-    height: 44%; /* Adjust as needed */
-    text-align: center;
-    font-family: "Times New Roman", Times, serif;
-  }
-  
-  .name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  .chips {
-    color: green;
-    font-weight: bold;
-  }
-  
+  background-color: #D3D3D3;
+  color: black;
+  padding: 8px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Aligns items to the left */
+  min-width: 120px;
+  height: auto; /* Adjust based on content or as needed */
+  font-family: "Times New Roman", Times, serif;
+}
+
+
+
+.name {
+  z-index: 999;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2%; /* Adds space between name and chips info */
+}
+
+.chips-container {
+display: flex;
+justify-content: center; /* horizontal alignment */
+align-items: center; /* vertical alignment */
+}
+
+.chips, .chips-won {
+margin: 5px; /* spacing between chips and chips-won */
+white-space: nowrap;
+color: green;
+}
+
+.chips-won {
+background-color: green;
+color: black;
+font-weight: bold;
+border-radius: 15%; /* Keeps edges curved */
+padding: .4% 7%; /* Increases padding around the text */
+}

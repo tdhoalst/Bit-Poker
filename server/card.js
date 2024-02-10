@@ -87,6 +87,7 @@ class Player {
         this.socketId = socketId;
 
         this.hand = [];
+        this.chipsWon = 0;
     }
 
     updateBetAmount(amount) {

@@ -45,8 +45,8 @@ const BettingScreen = ({ onRaiseConfirm, onBack, pot, playerChips, minCallAmount
         <button onClick={handleAllIn}>ALL IN</button>
       </div>
       <div className="action-buttons">
-        <button onClick={() => onRaiseConfirm(betAmount)}>RAISE</button>
         <button onClick={onBack}>BACK</button>
+        <button onClick={() => onRaiseConfirm(betAmount)}>{minCallAmount > 0 ? 'RAISE' : 'BET'}</button>
       </div>
     </div>
   );

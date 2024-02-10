@@ -187,7 +187,8 @@ function App() {
                 name={player.name}
                 cardImages={isCurrentPlayer ? player.cardImages : ['/assets/card_backside.jpg', '/assets/card_backside.jpg']}
                 cardNames={isCurrentPlayer ? player.cardNames : ['Card X', 'Card Y']}
-                chips={player.chips}
+                chips={player.chips === 0 ? 'ALL IN' : '$' + player.chips}
+                chipsWon={player.chipsWon}
                 status={player.status}
               />
             </div>
