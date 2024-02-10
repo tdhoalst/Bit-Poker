@@ -74,6 +74,7 @@ function App() {
         return player;
       }));
       setMinCallAmount(0);
+      setCommunityCards([]);
     });  
 
     socket.on('flop', (data) => {

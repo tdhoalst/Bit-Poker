@@ -135,50 +135,39 @@ class GameState {
     const handResult = this.poker.evaluateHand();
     const { message, winner, winners } = handResult;
     if (winner) {
-        // Single winner scenario
         winner.chipsWon = this.pot;
         io.emit('showdown', { message });
     } else if (winners && winners.length > 0) {
-        // Split pot scenario
         const splitPotAmount = this.pot / winners.length;
         winners.forEach(winner => {
-            winner.chips += splitPotAmount;
+            winner.chipsWon = splitPotAmount;
         });
         io.emit('showdown', { message });
-    } else {
-        // No winner (should not happen, but good to handle this case)
-        console.log("Error: No winner identified in showdown");
-    }
+    } 
     io.emit('allPlayers', gamestate.connectedPlayers);
-    //preNewHandState(winner, winners);
+    
+    // Delay execution of preNewHandState by 3 seconds
+    setTimeout(() => {
+      this.preNewHandState(winner, winners);
+    }, 5000); // 5000 milliseconds delay
   }
 
   preNewHandState(winner, winners) {
     if (winner) {
-      // Single winner scenario
       winner.chips += this.pot;
-      io.emit('showdown', { message });
+      winner.chipsWon = 0;
   } else if (winners && winners.length > 0) {
-      // Split pot scenario
       const splitPotAmount = this.pot / winners.length;
       winners.forEach(winner => {
           winner.chips += splitPotAmount;
+          winner.chipsWon = 0;
       });
-      io.emit('showdown', { message });
-  } else {
-      // No winner (should not happen, but good to handle this case)
-      console.log("Error: No winner identified in showdown");
-  }
-  io.emit('allPlayers', gamestate.connectedPlayers);
+  } 
+    io.emit('allPlayers', gamestate.connectedPlayers);
+    this.newHandState();
   }
   
-
   newHandState() {
-    
-
-    //add chips here
-
-
     console.log("New Hand State");
     for (let i = 0; i < this.connectedPlayers.length; i++) {
       this.connectedPlayers[i].cardImages = [];
@@ -197,6 +186,8 @@ class GameState {
       player.betAmount = 0;
       player.status = '';
     });
+    this.stage = 1;
+    this.handleNewStage();
   }
 
   handleNewStage() {
