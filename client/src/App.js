@@ -201,6 +201,8 @@ function App() {
         <BettingScreen
           onRaiseConfirm={handleBetConfirm}
           onBack={handleBack}
+          pot={pot}
+          playerChips={players.find(player => player.socketId === currentUserIdRef.current).chips}
         />
       )}
     </div>

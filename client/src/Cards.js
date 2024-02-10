@@ -3,8 +3,6 @@ import './Cards.css'; // Cards specific styles
 
 const Cards = ({ cardImages, cardNames }) => {
 
-  console.log('Card names:', cardNames);
-
   return (
     <div className="cards">
       {cardImages.map((image, index) => (

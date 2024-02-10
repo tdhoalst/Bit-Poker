@@ -1,6 +1,5 @@
 .App {
   text-align: center;
-  background: linear-gradient(to left top, hotpink, yellow);
 }
 
 .App-logo {
@@ -36,4 +35,8 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.winner-message {
+  color: #FFD700; /* gold color */
 }

@@ -1,15 +1,33 @@
 import React, { useState } from 'react';
 import './BettingScreen.css'; // Make sure to create this CSS file
 
-const BettingScreen = ({ onRaiseConfirm, onBack }) => {
-  const [betAmount, setBetAmount] = useState('');
+const BettingScreen = ({ onRaiseConfirm, onBack, pot, playerChips}) => {
+  const [betAmount, setBetAmount] = useState(0);
 
-  // Example functions for betting options
-  const handleMinRaise = () => setBetAmount('minRaiseAmount'); // replace with actual calculation
-  const handleHalfPot = () => setBetAmount('halfPotAmount'); // replace with actual calculation
-  const handleThreeQuartersPot = () => setBetAmount('threeQuartersPotAmount'); // replace with actual calculation
-  const handleFullPot = () => setBetAmount('fullPotAmount'); // replace with actual calculation
-  const handleAllIn = () => setBetAmount('allInAmount'); // replace with actual calculation
+    const handleMinRaise = () => {
+      console.log('Min Raise clicked');
+      setBetAmount('minRaiseAmount'); // replace with actual calculation
+    };
+  
+  const handleHalfPot = () => {
+    console.log('Half Pot clicked', pot / 2);
+    setBetAmount(pot / 2);
+  };
+  
+  const handleThreeQuartersPot = () => {
+    console.log('Three Quarters Pot clicked', pot * 0.75);
+    setBetAmount(pot * 0.75);
+  };
+  
+  const handleFullPot = () => {
+    console.log('Full Pot clicked', pot);
+    setBetAmount(pot);
+  };
+  
+  const handleAllIn = () => {
+    console.log('All In clicked', 'allInAmount');
+    setBetAmount(playerChips);
+  };  
 
   return (
     <div className="betting-screen">
