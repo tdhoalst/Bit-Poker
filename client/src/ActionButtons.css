@@ -6,7 +6,7 @@
     right: 0; /* Align to the right of the screen */
     display: flex;
     justify-content: space-evenly;
-    padding: 30px 0; /* Padding at top and bottom */
+    padding-bottom: 10px; 
   }
   
   .button {

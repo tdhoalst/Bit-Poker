@@ -27,6 +27,8 @@ function App() {
 
   const [pot, setPot] = useState(0);
 
+  const [minCallAmount, setMinCallAmount] = useState(0);
+
   const [isRaising, setIsRaising] = useState(false); // State to control the display of the betting screen  
 
 
@@ -49,6 +51,9 @@ function App() {
 
     socket.on('betMade', (betAmount) => {
       setPot(currentPot => Number(currentPot) + Number(betAmount));
+      if (betAmount > minCallAmount) {
+        setMinCallAmount(betAmount);
+      }
     });
 
     socket.on('preFlop', (data) => {
@@ -68,6 +73,7 @@ function App() {
         }
         return player;
       }));
+      setMinCallAmount(0);
     });  
 
     socket.on('flop', (data) => {
@@ -77,6 +83,7 @@ function App() {
         name: flopNames[index]
       }));
       setCommunityCards(existingCards => [...existingCards, ...updatedCards]);
+      setMinCallAmount(0);
     });
 
     socket.on('turn', (data) => {
@@ -86,6 +93,7 @@ function App() {
         name: turnName
       };
       setCommunityCards(existingCards => [...existingCards, updatedCard]);
+      setMinCallAmount(0);
     });
   
     socket.on('river', (data) => {
@@ -95,6 +103,7 @@ function App() {
         name: riverName
       };
       setCommunityCards(existingCards => [...existingCards, updatedCard]);
+      setMinCallAmount(0);
     });
 
     socket.on('showdown', (data) => {
@@ -123,7 +132,7 @@ function App() {
       socket.off('showdown');
       socket.off('newHand');
     };
-  }, [currentUserId, players]);
+  }, [currentUserId, players, minCallAmount]);
   
   // Handlers for button clicks
   const handleCall = () => {
@@ -142,8 +151,16 @@ function App() {
   };
 
   const handleBetConfirm = (amount) => {
-    console.log(`Raise to ${amount}`);
-    socket.emit('action', { action: 'bet', amount: amount, playerId: currentUserId });
+    console.log(`Attempt to raise to ${amount}`);
+    // Find the current player's chips
+    const currentPlayer = players.find(player => player.socketId === currentUserId);
+    if (currentPlayer && currentPlayer.chips > 0) {
+      const betAmount = Math.min(amount, currentPlayer.chips);
+      console.log(`Raise to ${betAmount}`);
+      socket.emit('action', { action: 'bet', amount: betAmount, playerId: currentUserId });
+    } else if (currentPlayer && currentPlayer.chips <= 0) {
+      console.log("Player does not have enough chips to bet.");
+    }
     setIsRaising(false); // Hide betting screen after confirming the bet
   };
 
@@ -194,6 +211,7 @@ function App() {
           onCall={handleCall}
           onCheck={handleCheck}
           onFold={handleFold}
+          minCallAmount={minCallAmount}
         />
       )}
   
@@ -203,6 +221,7 @@ function App() {
           onBack={handleBack}
           pot={pot}
           playerChips={players.find(player => player.socketId === currentUserIdRef.current).chips}
+          minCallAmount={minCallAmount}
         />
       )}
     </div>

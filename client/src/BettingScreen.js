@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import './BettingScreen.css'; // Make sure to create this CSS file
 
-const BettingScreen = ({ onRaiseConfirm, onBack, pot, playerChips}) => {
+const BettingScreen = ({ onRaiseConfirm, onBack, pot, playerChips, minCallAmount}) => {
   const [betAmount, setBetAmount] = useState(0);
 
-    const handleMinRaise = () => {
-      console.log('Min Raise clicked');
-      setBetAmount('minRaiseAmount'); // replace with actual calculation
-    };
+  const handleMinRaise = () => {
+    console.log('Min Raise clicked');
+    setBetAmount(minCallAmount + (minCallAmount *0.8));
+  };
   
   const handleHalfPot = () => {
     console.log('Half Pot clicked', pot / 2);
