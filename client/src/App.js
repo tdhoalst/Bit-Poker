@@ -73,6 +73,7 @@ function App() {
         }
         return player;
       }));
+      setPot(0);
       setMinCallAmount(0);
       setCommunityCards([]);
     });  
