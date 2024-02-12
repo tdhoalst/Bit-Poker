@@ -31,7 +31,6 @@ function App() {
 
   const [isRaising, setIsRaising] = useState(false); // State to control the display of the betting screen  
 
-
   useEffect(() => {
     currentUserIdRef.current = currentUserId;
 

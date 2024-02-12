@@ -5,16 +5,16 @@
     left: 50%;
     transform: translate(-50%, -60%);
 
-    width: 80%; /* Example width, adjust as needed */
+    width: 75%; /* Example width, adjust as needed */
 
     height: auto; /* Adjust based on content, or set a specific height */
 
     margin: auto; /* Center the table on the page */
-    aspect-ratio: 2 / 1; /* Oval shape aspect ratio */
-    background-color: rgb(0, 0, 0); /* Typical poker table color */
+    aspect-ratio: 3 / 1.35; /* Oval shape aspect ratio */
+    background-color: #1a1c1b; /* Typical poker table color */
     border: 1px solid #000; /* Optional: adds a border around the table */
-    border: 5px solid #2b00ff; /* Optional: adds a border around the table */
-    border-radius: 50% / 25%; /* Horizontal radius / Vertical radius */
+    border: 10px solid grey; /* Optional: adds a border around the table */
+    border-radius: 30% / 75%; /* Horizontal radius / Vertical radius */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Optional: adds some depth */
     overflow: visible; /* Ensures player containers can flow over the edge */
   }

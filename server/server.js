@@ -71,29 +71,65 @@ class GameState {
     this.poker.removePlayer(socketId);
   }
 
+  updatePlayerChips(socketId, action, amount) {
+    let player = this.getPlayerBySocketId(socketId);
+    if (player) {
+      let actualAmount = 0; // This will be the actual amount the player is going to bet or call with
+  
+      if (action === 'bet') {
+        let highestChipStack = 0;
+        let secondHighestChipStack = 0;
+    
+        // Iterate through connectedPlayers to find the highest and second highest chip stacks
+        this.connectedPlayers.forEach(p => {
+          const chips = p.chips;
+          if (chips > highestChipStack) {
+            secondHighestChipStack = highestChipStack; // Update second highest
+            highestChipStack = chips; // Update highest
+          } else if (chips > secondHighestChipStack) {
+            secondHighestChipStack = chips; // Update second highest if greater than current second highest but less than highest
+          }
+        });
+
+        // For a bet action, ensure the bet does not exceed the player's available chips
+        actualAmount = Math.min(player.chips, amount, secondHighestChipStack);
+        // Optionally, you might want to enforce minimum and maximum bet limits here
+
+        console.log(secondHighestChipStack);
+      } else if (action === 'call') {
+        // For a call action, the amount is the currentMinBet, but ensure it doesn't exceed the player's chips
+        actualAmount = Math.min(player.chips, this.currentMinBet);
+      }
+
+      console.log(`Calculated actualAmount: ${actualAmount}`);
+  
+      // Deduct the actualAmount from the player's chips and add it to the pot
+      player.chips -= actualAmount;
+      this.pot += actualAmount;
+      // Assuming betAmount tracks the total amount bet by the player in the current hand
+      player.betAmount += actualAmount;
+  
+      // Update player status with the action and the actual amount bet or called
+      this.updatePlayerStatus(socketId, action, actualAmount);
+      // Notify all clients about the bet made
+      io.emit('betMade', actualAmount);
+    }
+  }   
+
   updatePlayerStatus(socketId, action, amount) {
     let player = this.getPlayerBySocketId(socketId);
     if (player) {
         player.status = action;
-        if (action === 'bet' && amount) {
+        if ((action === 'bet' || action === 'call') && amount){
           player.status = action + ' $' + amount;
         }
-        if (action === 'call' && amount) {
-          player.status = action + ' $' + amount;
-        }
-    }
-  }
-
-  updatePlayerChips(socketId, amount) {
-    let player = this.getPlayerBySocketId(socketId);
-    if (player) {
-        player.chips -= amount - player.betAmount;
-        player.betAmount = amount;
     }
   }
 
   preFlopState() {
     try {
+        var emptyString = "";
+        io.emit('showdown', { emptyString });
         this.poker.preFlop();
         for (let i = 0; i < this.connectedPlayers.length; i++) {
             const player = this.poker.players[i];
@@ -145,18 +181,15 @@ class GameState {
         io.emit('showdown', { message });
     } 
     io.emit('allPlayers', gamestate.connectedPlayers);
-    
-    // Delay execution of preNewHandState by 3 seconds
-    setTimeout(() => {
-      this.preNewHandState(winner, winners);
-    }, 5000); // 5000 milliseconds delay
   }
 
-  preNewHandState(winner, winners) {
+  preNewHandState() {
+    const handResult = this.poker.evaluateHand();
+    const { message, winner, winners } = handResult;
     if (winner) {
       winner.chips += this.pot;
       winner.chipsWon = 0;
-  } else if (winners && winners.length > 0) {
+    } else if (winners && winners.length > 0) {
       const splitPotAmount = this.pot / winners.length;
       winners.forEach(winner => {
           winner.chips += splitPotAmount;
@@ -164,7 +197,10 @@ class GameState {
       });
   } 
     io.emit('allPlayers', gamestate.connectedPlayers);
-    this.newHandState();
+
+    setTimeout(() => {
+      this.newHandState();
+    }, 5000);
   }
   
   newHandState() {
@@ -179,7 +215,6 @@ class GameState {
     this.poker.board = new Board();
     this.poker.deck = new Deck();
     this.poker.deck.shuffle();
-    this.stage = 1;
     this.pot = 0;
     this.currentMinBet = 0;
     this.poker.players.forEach(player => {
@@ -217,6 +252,9 @@ class GameState {
             this.showdownState();
             break;
         case 6:
+            this.preNewHandState();
+            break;
+        case 12:
             this.newHandState();
             var emptyString = "";
             io.emit('showdown', { emptyString });
@@ -236,7 +274,7 @@ class GameState {
       const player = this.connectedPlayers[currentIndex];
   
       if (((player.status !== 'fold' && player.betAmount !== this.currentMinBet) && (!player.chips === 0 || this.stage == 5)) || player.status === ''){
-        console.log(player.status, player.betAmount, this.currentMinBet, player.chips);
+        console.log("player status " + player.status, "playerbetamount: " + player.betAmount, "minbet: " + this.currentMinBet, "player chips: " +  player.chips);
         allCalledOrFolded = false;
         break;
       }
@@ -289,10 +327,7 @@ io.on('connection', (socket) => {
     if (data.action === 'bet' && data.amount) {
       const amount = Number(data.amount); // Convert to number
       broadcastData.amount = amount;
-      gamestate.updatePlayerStatus(socket.id, data.action, amount);
-      gamestate.updatePlayerChips(socket.id, amount);
-      gamestate.pot += amount;
-      io.emit('betMade', amount);
+      gamestate.updatePlayerChips(socket.id, data.action, amount);
       if (amount > gamestate.currentMinBet) {
         gamestate.currentMinBet = amount;
       }
@@ -300,10 +335,7 @@ io.on('connection', (socket) => {
     if (data.action === 'call') {
       const callAmount = Number(gamestate.currentMinBet); // Convert to number
       broadcastData.amount = callAmount;
-      gamestate.updatePlayerStatus(socket.id, data.action, callAmount);
-      gamestate.updatePlayerChips(socket.id, callAmount);
-      gamestate.pot += callAmount;
-      io.emit('betMade', callAmount);
+      gamestate.updatePlayerChips(socket.id, data.action, callAmount);
     }
     if(data.action === 'check') {
       gamestate.updatePlayerStatus(socket.id, data.action);
