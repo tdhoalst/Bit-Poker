@@ -116,12 +116,16 @@ class GameState {
     }
   }   
 
+  numberWithCommas = (value) => {
+    return new Intl.NumberFormat('en-US').format(value);
+  };
+
   updatePlayerStatus(socketId, action, amount) {
     let player = this.getPlayerBySocketId(socketId);
     if (player) {
         player.status = action;
         if ((action === 'bet' || action === 'call') && amount){
-          player.status = action + ' $' + amount;
+          player.status = action + ' $' + this.numberWithCommas(amount);
         }
     }
   }
@@ -269,6 +273,50 @@ class GameState {
     let allCalledOrFolded = true;
     let currentIndex = 0;
     const startingIndex = 0; // Since you start checking from index 0
+
+
+
+    /*
+    //fold
+    let numNotFold = 0;
+    for (let i = 0; i < this.connectedPlayers.length; i++) { 
+      if (this.connectedPlayers[i].status !== 'fold') {
+        numNotFold++;
+      } 
+    }
+    if (numNotFold < 1) {
+      while (this.stage < 5) {
+        this.stage = 5;
+        this.handleNewStage();
+      }
+    }
+
+    //call
+    let numCall = 0;
+    for (let i = 0; i < this.connectedPlayers.length; i++) { 
+      if (this.connectedPlayers[i].status === 'call') {
+        numCall++;
+      } 
+    }
+    if (numCall == this.connectedPlayers.length) {
+      this.stage++;
+      this.handleNewStage();
+    }
+
+    //all in
+    let numNotAllIn = 0;
+    for (let i = 0; i < this.connectedPlayers.length; i++) { 
+      if (this.connectedPlayers[i].chips !== 0 && this.connectedPlayers[i].status !== 'fold') {
+        numNotAllIn++;
+      } 
+    }
+    if (numNotAllIn > 1) {
+      while (this.stage < 5) {
+        this.stage = 5;
+        this.handleNewStage();
+      }
+    }
+    */
   
     do {
       const player = this.connectedPlayers[currentIndex];

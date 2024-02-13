@@ -173,6 +173,10 @@ function App() {
     setIsRaising(false); // Hide betting screen without confirming
   };
 
+  const numberWithCommas = (value) => {
+    return new Intl.NumberFormat('en-US').format(value);
+  };
+
   return (
     <div className="App">
       <GameStatus startingBigBlind={20} />
@@ -188,7 +192,7 @@ function App() {
                 name={player.name}
                 cardImages={isCurrentPlayer ? player.cardImages : ['/assets/card_backside.jpg', '/assets/card_backside.jpg']}
                 cardNames={isCurrentPlayer ? player.cardNames : ['Card X', 'Card Y']}
-                chips={player.chips === 0 ? 'ALL IN' : '$' + player.chips}
+                chips={player.chips === 0 ? 'ALL IN' : '$' + numberWithCommas(player.chips)}
                 chipsWon={player.chipsWon}
                 status={player.status}
               />
@@ -197,7 +201,7 @@ function App() {
         })}
   
         <div className="pot-display">
-          Pot: ${pot}
+          Pot: ${numberWithCommas(pot)}
         </div>
   
         <Board cards={communityCards} />

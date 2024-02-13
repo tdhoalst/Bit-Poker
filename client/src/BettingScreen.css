@@ -29,6 +29,11 @@
     cursor: pointer;
     transition: background-color 0.3s ease;
   }
+
+  .betting-buttons button:hover,
+  .action-buttons button:hover {
+    opacity: 0.8;
+  }
   
   /* Add specific styles for buttons similar to the previous ones */
   

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './BettingScreen.css'; // Make sure to create this CSS file
+import './BettingScreen.css';
 
 const BettingScreen = ({ onRaiseConfirm, onBack, pot, playerChips, minCallAmount}) => {
   const [betAmount, setBetAmount] = useState(0);
