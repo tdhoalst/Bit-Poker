@@ -1,5 +1,4 @@
 import React from 'react';
-import { Textfit } from 'react-textfit';
 import './PlayerInfo.css';
 
 const numberWithCommas = (value) => {
