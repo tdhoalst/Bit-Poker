@@ -27,10 +27,7 @@ const io = socketIO(server, {
 const port = 3011; // Default port
 
 // Connect to MongoDB with a hardcoded URI
-mongoose.connect('mongodb://localhost/mypokerdatabase', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-})
+mongoose.connect('mongodb://localhost/mypokerdatabase')
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('MongoDB connection error:', err));
 
@@ -50,11 +47,17 @@ class GameState {
 
     this.currentMinBet = 0;
 
+    this.numPlayers = 0;
+
     this.pot = 0;
 
     this.stage = 0;
     this.isStageIncremented = false;
     this.poker = new Poker(0, 10000);
+  }
+
+  getPlayerByPosition(position) {
+    return this.connectedPlayers.find(player => player.position === position);
   }
 
   getPlayerBySocketId(socketId) {
@@ -95,14 +98,14 @@ class GameState {
         actualAmount = Math.min(player.chips, amount, secondHighestChipStack);
       } else if (action === 'call') {
         // For a call action, the amount is the currentMinBet, but ensure it doesn't exceed the player's chips
-        actualAmount = Math.min(player.chips, this.currentMinBet);
+        actualAmount = Math.min(player.chips, this.currentMinBet - player.betAmount);
       }
 
       console.log(`Calculated actualAmount: ${actualAmount}`);
 
 
 
-      player.intermediateBetMade = actualAmount;
+      player.intermediateBetMade += actualAmount;
 
   
       // Deduct the actualAmount from the player's chips and add it to the pot
@@ -145,12 +148,15 @@ class GameState {
         this.poker.preFlop();
         for (let i = 0; i < this.connectedPlayers.length; i++) {
             const player = this.poker.players[i];
+            console.log(player);
             const playerHandImages = player.hand.map(card => card.imagePath);
             const playerHandNames = player.hand.map(card => card.name);
             this.connectedPlayers[i].cardImages = playerHandImages;
             this.connectedPlayers[i].cardNames = playerHandNames;
             io.to(this.connectedPlayers[i].socketId).emit('preFlop', { playerHandImages, playerHandNames });
         }
+        this.postBlinds();
+        io.emit('allPlayers', gamestate.connectedPlayers);
         console.log("Emitting pre-flop");
     } catch (error) {
         console.error("Error in preFlopState:", error);
@@ -222,6 +228,11 @@ class GameState {
       this.connectedPlayers[i].cardNames = [];
       this.connectedPlayers[i].hand = [];
       this.connectedPlayers[i].chipsWon = 0;
+      if(this.connectedPlayers[i].position === this.numPlayers -1) {
+        this.connectedPlayers[i].position = 0;
+      } else {
+        this.connectedPlayers[i].position++;
+      }
     }
     io.emit('allPlayers', gamestate.connectedPlayers);
     this.poker.board = new Board();
@@ -244,6 +255,7 @@ class GameState {
         this.connectedPlayers[i].chips -= this.connectedPlayers[i].intermediateBetMade;
         this.connectedPlayers[i].intermediateBetMade = 0; //used to handle call edge cases
         this.connectedPlayers[i].status = '';
+        this.connectedPlayers[i].hasActed = false;
         this.connectedPlayers[i].betAmount = 0;
       }
     }
@@ -297,7 +309,8 @@ class GameState {
     // Check conditions for each connected player
     for (let player of connectedPlayers) {
       // Player must act or be all-in to not prevent stage advancement
-      if (player.chips > 0 && (player.status === '' || (player.status !== 'fold' && player.betAmount !== this.currentMinBet))) {
+      if (player.chips > 0 && (!player.hasActed || (player.status !== 'fold' && player.betAmount !== this.currentMinBet))) {
+        console.log(player.name, player.hasActed, player.status, player.betAmount, this.currentMinBet);
         allCalledOrFolded = false;
         break;
       }
@@ -309,6 +322,21 @@ class GameState {
       this.handleNewStage();
     } else {
       console.log("Not all players have called or folded");
+    }
+  }
+
+  postBlinds() {
+    const smallBlind = this.getPlayerByPosition(0);
+    const bigBlind = this.getPlayerByPosition(1);
+    console.log("posting blinds");
+    console.log(this.currentBigBlind);
+    console.log(smallBlind);
+    console.log(bigBlind);
+    if (smallBlind) {
+      gamestate.updatePlayerChips(smallBlind.socketId, 'bet', this.currentBigBlind/2);
+    }
+    if (bigBlind) {
+      gamestate.updatePlayerChips(bigBlind.socketId, 'bet', this.currentBigBlind);
     }
   }
 }
@@ -331,7 +359,8 @@ const generateRandomName = () => {
 io.on('connection', (socket) => {
   console.log(`User ${socket.id} connected`);
   const playerName = generateRandomName();
-  const newPlayer = new Player(playerName, 5000, socket.id);
+  const newPlayer = new Player(playerName, 5000, socket.id, gamestate.numPlayers);
+  gamestate.numPlayers++;
 
   gamestate.addPlayer(newPlayer);
 
@@ -364,6 +393,10 @@ io.on('connection', (socket) => {
     if(data.action === 'fold') {
       gamestate.updatePlayerStatus(socket.id, data.action);
     }
+    const player = gamestate.getPlayerBySocketId(data.playerId);
+    if (player) {
+      player.hasActed = true;
+    }
     console.log(broadcastData);
     io.emit('allPlayers', gamestate.connectedPlayers);
 
@@ -373,6 +406,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`User ${socket.id} disconnected`);
     gamestate.removePlayerBySocketId(socket.id);
+    gamestate.numPlayers--;
     io.emit('allPlayers', gamestate.connectedPlayers); // io.emit sends to all clients
   });
 });

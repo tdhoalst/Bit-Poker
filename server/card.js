@@ -77,7 +77,7 @@ class Deck {
 }
 
 class Player {
-    constructor(name, chips, socketId) {
+    constructor(name, chips, socketId, position) {
         this.name = name;
         this.cardImages = [],
         this.cardNames = [],
@@ -87,6 +87,10 @@ class Player {
         this.socketId = socketId;
 
         this.intermediateBetMade = 0;
+
+
+        this.position = position;
+        this.hasActed = false;
 
         this.hand = [];
         this.chipsWon = 0;
