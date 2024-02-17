@@ -192,7 +192,7 @@ function App() {
                 name={player.name}
                 cardImages={isCurrentPlayer ? player.cardImages : ['/assets/card_backside.jpg', '/assets/card_backside.jpg']}
                 cardNames={isCurrentPlayer ? player.cardNames : ['Card X', 'Card Y']}
-                chips={player.chips === 0 ? 'ALL IN' : '$' + numberWithCommas(player.chips)}
+                chips={player.chips - player.intermediateBetMade === 0 ? 'ALL IN' : '$' + numberWithCommas(player.chips - player.intermediateBetMade)}
                 chipsWon={player.chipsWon}
                 status={player.status}
               />

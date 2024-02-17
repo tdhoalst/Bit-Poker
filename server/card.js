@@ -86,6 +86,8 @@ class Player {
         this.betAmount = 0;
         this.socketId = socketId;
 
+        this.intermediateBetMade = 0;
+
         this.hand = [];
         this.chipsWon = 0;
     }

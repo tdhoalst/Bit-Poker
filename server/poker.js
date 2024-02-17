@@ -200,10 +200,10 @@ class Poker {
                 // Sort the cards of the flush suit by rank, in descending order
                 const sortedFlushCards = suits[suit].sort((a, b) => b.rank - a.rank);
                 // Return the sorted flush cards
-                return sortedFlushCards;
+                return [true, sortedFlushCards];
             }
         }
-        return [];
+        return [false, null];
     }    
 
     hasStraight(playerHand) {

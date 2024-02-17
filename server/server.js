@@ -93,18 +93,21 @@ class GameState {
 
         // For a bet action, ensure the bet does not exceed the player's available chips
         actualAmount = Math.min(player.chips, amount, secondHighestChipStack);
-        // Optionally, you might want to enforce minimum and maximum bet limits here
-
-        console.log(secondHighestChipStack);
       } else if (action === 'call') {
         // For a call action, the amount is the currentMinBet, but ensure it doesn't exceed the player's chips
         actualAmount = Math.min(player.chips, this.currentMinBet);
       }
 
       console.log(`Calculated actualAmount: ${actualAmount}`);
+
+
+
+      player.intermediateBetMade = actualAmount;
+
   
       // Deduct the actualAmount from the player's chips and add it to the pot
-      player.chips -= actualAmount;
+      //player.chips -= actualAmount;
+
       this.pot += actualAmount;
       // Assuming betAmount tracks the total amount bet by the player in the current hand
       player.betAmount += actualAmount;
@@ -113,12 +116,13 @@ class GameState {
       this.updatePlayerStatus(socketId, action, actualAmount);
       // Notify all clients about the bet made
       io.emit('betMade', actualAmount);
+
+
+      if(actualAmount > this.currentMinBet) { 
+        this.currentMinBet = actualAmount;
+      }
     }
   }   
-
-  numberWithCommas = (value) => {
-    return new Intl.NumberFormat('en-US').format(value);
-  };
 
   updatePlayerStatus(socketId, action, amount) {
     let player = this.getPlayerBySocketId(socketId);
@@ -129,6 +133,10 @@ class GameState {
         }
     }
   }
+
+  numberWithCommas = (value) => {
+    return new Intl.NumberFormat('en-US').format(value);
+  };
 
   preFlopState() {
     try {
@@ -233,6 +241,8 @@ class GameState {
     this.currentMinBet = 0;
     for (let i = 0; i < this.connectedPlayers.length; i++) {
       if (!this.connectedPlayers[i].chips == 0) {
+        this.connectedPlayers[i].chips -= this.connectedPlayers[i].intermediateBetMade;
+        this.connectedPlayers[i].intermediateBetMade = 0; //used to handle call edge cases
         this.connectedPlayers[i].status = '';
         this.connectedPlayers[i].betAmount = 0;
       }
@@ -271,67 +281,30 @@ class GameState {
 
   checkStageUpdate() {
     let allCalledOrFolded = true;
-    let currentIndex = 0;
-    const startingIndex = 0; // Since you start checking from index 0
-
-
-
-    /*
-    //fold
-    let numNotFold = 0;
-    for (let i = 0; i < this.connectedPlayers.length; i++) { 
-      if (this.connectedPlayers[i].status !== 'fold') {
-        numNotFold++;
-      } 
-    }
-    if (numNotFold < 1) {
-      while (this.stage < 5) {
-        this.stage = 5;
-        this.handleNewStage();
-      }
-    }
-
-    //call
-    let numCall = 0;
-    for (let i = 0; i < this.connectedPlayers.length; i++) { 
-      if (this.connectedPlayers[i].status === 'call') {
-        numCall++;
-      } 
-    }
-    if (numCall == this.connectedPlayers.length) {
+    const connectedPlayers = this.connectedPlayers.filter(player => player.status !== 'fold');
+    const activePlayers = connectedPlayers.filter(player => player.chips > 0);
+  
+    // Automatically advance if only one active player is left who can act
+    if (activePlayers.length <= 1 && this.stage !== 5) {
       this.stage++;
       this.handleNewStage();
+      return;
     }
 
-    //all in
-    let numNotAllIn = 0;
-    for (let i = 0; i < this.connectedPlayers.length; i++) { 
-      if (this.connectedPlayers[i].chips !== 0 && this.connectedPlayers[i].status !== 'fold') {
-        numNotAllIn++;
-      } 
-    }
-    if (numNotAllIn > 1) {
-      while (this.stage < 5) {
-        this.stage = 5;
-        this.handleNewStage();
-      }
-    }
-    */
+
+    //MODIFY PLAYER.CHIPS WHEN BETTING/CALLING ADD INTERMEDIATE POT VALUE THIS.STAGEPOT?
   
-    do {
-      const player = this.connectedPlayers[currentIndex];
-  
-      if (((player.status !== 'fold' && player.betAmount !== this.currentMinBet) && (!player.chips === 0 || this.stage == 5)) || player.status === ''){
-        console.log("player status " + player.status, "playerbetamount: " + player.betAmount, "minbet: " + this.currentMinBet, "player chips: " +  player.chips);
+    // Check conditions for each connected player
+    for (let player of connectedPlayers) {
+      // Player must act or be all-in to not prevent stage advancement
+      if (player.chips > 0 && (player.status === '' || (player.status !== 'fold' && player.betAmount !== this.currentMinBet))) {
         allCalledOrFolded = false;
         break;
       }
+    }
   
-      currentIndex = (currentIndex + 1) % this.connectedPlayers.length;
-    } while (currentIndex !== startingIndex);
-  
-    if(allCalledOrFolded) {
-      console.log("All players have called or folded");
+    // Advance stage if all conditions are met
+    if (allCalledOrFolded) {
       this.stage++;
       this.handleNewStage();
     } else {
@@ -339,6 +312,7 @@ class GameState {
     }
   }
 }
+
 
 const gamestate = new GameState();
 
@@ -367,21 +341,20 @@ io.on('connection', (socket) => {
   // Send the socket ID to the client (used to determine which hole cards to show which client)
   socket.emit('playerSocketId', socket.id);
 
+  //TODO: IF PLAYER JOINS MID HAND SEND THEM HAND INFROMATION (COMMUNICTY CARDS, POT, ECT (GLOBAL VARIABLE RE?))
+
   socket.on('action', (data) => {
    const broadcastData = {
       playerId: data.playerId,
       action: data.action
     };
     if (data.action === 'bet' && data.amount) {
-      const amount = Number(data.amount); // Convert to number
+      const amount = Number(data.amount);
       broadcastData.amount = amount;
       gamestate.updatePlayerChips(socket.id, data.action, amount);
-      if (amount > gamestate.currentMinBet) {
-        gamestate.currentMinBet = amount;
-      }
     }
     if (data.action === 'call') {
-      const callAmount = Number(gamestate.currentMinBet); // Convert to number
+      const callAmount = Number(gamestate.currentMinBet);
       broadcastData.amount = callAmount;
       gamestate.updatePlayerChips(socket.id, data.action, callAmount);
     }
