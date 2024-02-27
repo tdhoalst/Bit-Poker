@@ -32,8 +32,7 @@ mongoose.connect('mongodb://localhost/mypokerdatabase')
 .catch(err => console.error('MongoDB connection error:', err));
 
 const actionSchema = new mongoose.Schema({
-  status: String,
-  // Additional fields can be added here
+  status: String
 });
 
 const Action = mongoose.model('Action', actionSchema);
@@ -190,11 +189,13 @@ class GameState {
     const { message, winner, winners } = handResult;
     if (winner) {
         winner.chipsWon = this.pot;
+        winner.showCards = true;
         io.emit('showdown', { message });
     } else if (winners && winners.length > 0) {
         const splitPotAmount = this.pot / winners.length;
         winners.forEach(winner => {
             winner.chipsWon = splitPotAmount;
+            winner.showCards = true;
         });
         io.emit('showdown', { message });
     } 
@@ -228,6 +229,7 @@ class GameState {
       this.connectedPlayers[i].cardNames = [];
       this.connectedPlayers[i].hand = [];
       this.connectedPlayers[i].chipsWon = 0;
+      this.connectedPlayers[i].showCards = false;
       if(this.connectedPlayers[i].position === this.numPlayers -1) {
         this.connectedPlayers[i].position = 0;
       } else {
@@ -302,9 +304,6 @@ class GameState {
       this.handleNewStage();
       return;
     }
-
-
-    //MODIFY PLAYER.CHIPS WHEN BETTING/CALLING ADD INTERMEDIATE POT VALUE THIS.STAGEPOT?
   
     // Check conditions for each connected player
     for (let player of connectedPlayers) {

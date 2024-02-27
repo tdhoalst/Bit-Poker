@@ -190,8 +190,8 @@ function App() {
             <div key={player.socketId} className={playerPosition}>
               <Player
                 name={player.name}
-                cardImages={isCurrentPlayer ? player.cardImages : ['/assets/card_backside.jpg', '/assets/card_backside.jpg']}
-                cardNames={isCurrentPlayer ? player.cardNames : ['Card X', 'Card Y']}
+                cardImages={isCurrentPlayer || player.showCards ? player.cardImages : ['/assets/card_backside.jpg', '/assets/card_backside.jpg']}
+                cardNames={isCurrentPlayer || player.showCards ? player.cardNames : ['Card X', 'Card Y']}
                 chips={player.chips - player.intermediateBetMade === 0 ? 'ALL IN' : '$' + numberWithCommas(player.chips - player.intermediateBetMade)}
                 chipsWon={player.chipsWon}
                 status={player.status}

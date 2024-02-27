@@ -88,6 +88,8 @@ class Player {
 
         this.intermediateBetMade = 0;
 
+        this.showCards = false;
+
 
         this.position = position;
         this.hasActed = false;
